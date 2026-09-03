@@ -70,9 +70,9 @@ export default function AttendanceDisputesModal({ open, onClose, cancelDispute, 
 
                   <div className="text-slate-400 text-[10px] pt-1">
                     {selectedMyDisputeDetail.reviewed_at && (
-                      <p>Resolved: {new Date(selectedMyDisputeDetail.reviewed_at).toLocaleString('en-US', { timeZone: 'Asia/Manila', month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+                      <p>Resolved: {new Date(selectedMyDisputeDetail.reviewed_at).toLocaleString('en-US', { timeZone: 'Asia/Riyadh', month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
                     )}
-                    <p>Filed: {new Date(selectedMyDisputeDetail.created_at).toLocaleString('en-US', { timeZone: 'Asia/Manila', month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+                    <p>Filed: {new Date(selectedMyDisputeDetail.created_at).toLocaleString('en-US', { timeZone: 'Asia/Riyadh', month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
                   </div>
 
                   {selectedMyDisputeDetail.status === 'Pending' && (

@@ -9,7 +9,7 @@ type Props = { open: boolean; onClose: () => void; announcementContent: string; 
 
 export default function AnnouncementsModal({ open, onClose, announcementContent, announcementId, announcementImageInputRef, announcementImagePreview, announcementImageUrl, announcementLoading, announcementMsg, announcementRemoveImage, announcementSaving, announcementUpdatedAt, clearAnnouncementImage, handleAnnouncementImageChange, publishAnnouncement, setAnnouncementContent }: Props) {
   return (
-    <ModalShell open={open} onClose={onClose} title="Announcements" description={announcementUpdatedAt ? `Last: ${new Date(announcementUpdatedAt).toLocaleString('en-US', { timeZone: 'Asia/Manila', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}` : undefined} icon={<Megaphone size={17} strokeWidth={2.4}/>} size="lg" closeDisabled={announcementSaving}>
+    <ModalShell open={open} onClose={onClose} title="Announcements" description={announcementUpdatedAt ? `Last: ${new Date(announcementUpdatedAt).toLocaleString('en-US', { timeZone: 'Asia/Riyadh', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}` : undefined} icon={<Megaphone size={17} strokeWidth={2.4}/>} size="lg" closeDisabled={announcementSaving}>
           <div className="overflow-y-auto flex-1 pr-1">
           {announcementMsg && <div className={`p-2.5 rounded-xl text-xs font-bold mb-3 ${announcementMsg.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>{announcementMsg.text}</div>}
           <div className="min-h-[137px]">

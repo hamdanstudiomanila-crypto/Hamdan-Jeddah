@@ -73,16 +73,16 @@ export default function AttendanceRecordsModal({ open, onClose, pageSize, attend
                     <div className="flex items-center justify-between gap-2 mt-1.5">
                       <span className="text-slate-400 text-xs">
                         {log.log_date
-                          ? new Date(log.log_date).toLocaleDateString('en-US', { timeZone: 'Asia/Manila', month: 'short', day: 'numeric', year: 'numeric' })
+                          ? new Date(log.log_date).toLocaleDateString('en-US', { timeZone: 'Asia/Riyadh', month: 'short', day: 'numeric', year: 'numeric' })
                           : 'N/A'}
                       </span>
                       <span className="text-slate-600 text-xs">
                         {log.time_in
-                          ? new Date(log.time_in).toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit' })
+                          ? new Date(log.time_in).toLocaleTimeString('en-US', { timeZone: 'Asia/Riyadh', hour: '2-digit', minute: '2-digit' })
                           : 'N/A'}
                         {' – '}
                         {log.time_out
-                          ? new Date(log.time_out).toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit' })
+                          ? new Date(log.time_out).toLocaleTimeString('en-US', { timeZone: 'Asia/Riyadh', hour: '2-digit', minute: '2-digit' })
                           : '—'}
                       </span>
                     </div>

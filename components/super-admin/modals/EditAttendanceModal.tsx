@@ -11,7 +11,7 @@ export default function EditAttendanceModal({ editingLog, logSaving, saveEditLog
   if (!editingLog) return null;
   return (
     <ModalShell open onClose={() => setEditingLog(null)} title="Edit Attendance" description={editingLog.employeeName} size="sm" closeDisabled={logSaving} footer={<div className="flex gap-3"><button type="button" className="flex-1 rounded-full bg-slate-100 p-3 text-sm font-medium" onClick={() => setEditingLog(null)}>Cancel</button><button type="button" className="flex-1 btn-primary disabled:opacity-50" onClick={saveEditLog} disabled={logSaving || !editingLog.timeInLocal}>{logSaving ? <span className="flex items-center justify-center gap-2"><Spinner size="sm" />Saving...</span> : 'Save'}</button></div>}>
-            <label className="label-branded">Time In (Philippine Time)</label>
+            <label className="label-branded">Time In (Jeddah Time)</label>
             <input
               type="datetime-local"
               className="input-field mb-4"
@@ -21,7 +21,7 @@ export default function EditAttendanceModal({ editingLog, logSaving, saveEditLog
               }
             />
 
-            <label className="label-branded">Time Out (Philippine Time)</label>
+            <label className="label-branded">Time Out (Jeddah Time)</label>
             <input
               type="datetime-local"
               className="input-field mb-1"

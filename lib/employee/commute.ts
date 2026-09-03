@@ -7,7 +7,7 @@
 
 export const getManilaDateTimeInputs = () => {
   const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Manila',
+    timeZone: 'Asia/Riyadh',
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
@@ -30,7 +30,7 @@ export const formatManilaClockValue = (isoValue: string | null | undefined) => {
   const date = new Date(isoValue);
   if (!Number.isFinite(date.getTime())) return '--';
   return date.toLocaleTimeString('en-PH', {
-    timeZone: 'Asia/Manila',
+    timeZone: 'Asia/Riyadh',
     hour: 'numeric',
     minute: '2-digit',
   });
@@ -38,10 +38,10 @@ export const formatManilaClockValue = (isoValue: string | null | undefined) => {
 
 export const getManilaForecastMaxDate = () => {
   const start = getManilaDateTimeInputs().date;
-  const date = new Date(`${start}T12:00:00+08:00`);
+  const date = new Date(`${start}T12:00:00+03:00`);
   date.setUTCDate(date.getUTCDate() + 6);
   return new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Manila',
+    timeZone: 'Asia/Riyadh',
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
@@ -512,7 +512,7 @@ export const formatCommuteUpdatedAt = (isoValue: string | null | undefined) => {
   const date = new Date(isoValue);
   if (!Number.isFinite(date.getTime())) return '--';
   return date.toLocaleTimeString('en-PH', {
-    timeZone: 'Asia/Manila',
+    timeZone: 'Asia/Riyadh',
     hour: 'numeric',
     minute: '2-digit',
   });

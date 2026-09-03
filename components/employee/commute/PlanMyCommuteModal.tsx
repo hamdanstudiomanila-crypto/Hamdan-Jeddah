@@ -527,7 +527,7 @@ export default function PlanMyCommuteModal({
     setCommuteError(null);
     try {
       const requestedDeparture = new Date(
-        `${commuteDepartureDate}T${commuteDepartureTime}:00+08:00`
+        `${commuteDepartureDate}T${commuteDepartureTime}:00+03:00`
       );
       const response = await fetch('/api/commute-check', {
         method: 'POST',

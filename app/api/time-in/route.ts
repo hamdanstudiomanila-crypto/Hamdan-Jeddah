@@ -111,12 +111,12 @@ export async function POST(request: Request) {
     const lateCutoffMinute = typeof settingsMap.late_cutoff_minute === 'number' ? settingsMap.late_cutoff_minute : FALLBACK_LATE_CUTOFF_MINUTE;
 
     // --- Step 3: Compute today's date and Present/Late status using
-    // the SERVER clock in Manila time, not anything the client sends.
+    // the SERVER clock in Jeddah time, not anything the client sends.
     // This closes the same "spoofed device clock" gap we fixed earlier
     // for the timestamp itself. ---
     const now = new Date();
     const manilaParts = new Intl.DateTimeFormat('en-CA', {
-      timeZone: 'Asia/Manila',
+      timeZone: 'Asia/Riyadh',
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',

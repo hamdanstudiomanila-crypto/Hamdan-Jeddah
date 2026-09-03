@@ -47,7 +47,7 @@ export default function HolidaysModal({ open, onClose, addHoliday, deleteHoliday
                 <div key={h.id} className="flex items-center justify-between gap-2 p-2.5 bg-slate-50 rounded-xl border border-slate-100">
                   <div className="min-w-0">
                     <span className="font-bold text-slate-900 text-xs">{h.name}</span>
-                    <span className="text-slate-400 text-xs"> · {new Date(h.holiday_date).toLocaleDateString('en-US', { timeZone: 'Asia/Manila', month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                    <span className="text-slate-400 text-xs"> · {new Date(h.holiday_date).toLocaleDateString('en-US', { timeZone: 'Asia/Riyadh', month: 'short', day: 'numeric', year: 'numeric' })}</span>
                   </div>
                   <button onClick={() => deleteHoliday(h.id)} className="text-rose-500 hover:text-rose-700 text-xs font-bold flex-shrink-0">Remove</button>
                 </div>

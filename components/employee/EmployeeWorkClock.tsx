@@ -12,11 +12,11 @@ function getManilaClock() {
   const now = new Date();
   return {
     time: now.toLocaleTimeString('en-GB', {
-      timeZone: 'Asia/Manila',
+      timeZone: 'Asia/Riyadh',
       hour12: false,
     }),
     date: now.toLocaleDateString('en-US', {
-      timeZone: 'Asia/Manila',
+      timeZone: 'Asia/Riyadh',
       weekday: 'long',
       year: 'numeric',
       month: 'long',
@@ -74,7 +74,7 @@ function EmployeeWorkClock({ todayLog }: { todayLog: TodayLog }) {
       </div>
       <div className="relative flex min-w-0 flex-1 flex-col justify-center px-4 py-5 text-left sm:px-5">
         <span className={`absolute right-0 top-0 h-full w-1 bg-gradient-to-b transition-colors duration-300 ${workClockTone.rail}`} aria-hidden="true" />
-        <p className="text-[9px] font-extrabold uppercase tracking-[0.18em] text-slate-400">Philippine time</p>
+        <p className="text-[9px] font-extrabold uppercase tracking-[0.18em] text-slate-400">Jeddah time</p>
         <p className="mt-1 font-mono text-[clamp(2rem,8vw,3rem)] font-black leading-none tabular-nums tracking-[-0.08em] text-slate-950 dark:text-white">{clock.time}</p>
         <div className="mt-3 border-t border-dashed border-slate-200 pt-2 dark:border-slate-700">
           <p className="truncate text-[9px] font-bold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-300">{clock.date}</p>

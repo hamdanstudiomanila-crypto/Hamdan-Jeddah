@@ -43,7 +43,7 @@ export default function AttendanceCalendarModal({ open, onClose, month, onMonthC
             <button type="button" key={cell.date} onClick={() => onSelectDate(cell.date)} aria-label={`${cell.date}: ${cell.holiday || cell.log?.status || 'No record'}`} className={`min-h-14 rounded-xl border p-1.5 text-left transition hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 sm:min-h-[66px] ${selectedDate === cell.date ? 'ring-2 ring-blue-400' : ''} ${color}`}>
               <p className="text-[10px] font-extrabold">{cell.day}</p>
               <p className="mt-1 line-clamp-2 text-[8px] font-bold leading-tight">{cell.holiday || cell.log?.status || '—'}</p>
-              {cell.log?.time_in && <p className="mt-1 hidden text-[8px] sm:block">{new Date(cell.log.time_in).toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: 'numeric', minute: '2-digit' })}</p>}
+              {cell.log?.time_in && <p className="mt-1 hidden text-[8px] sm:block">{new Date(cell.log.time_in).toLocaleTimeString('en-US', { timeZone: 'Asia/Riyadh', hour: 'numeric', minute: '2-digit' })}</p>}
             </button>
           );
         })}
@@ -55,8 +55,8 @@ export default function AttendanceCalendarModal({ open, onClose, month, onMonthC
           {selectedDay.log ? (
             <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-slate-600 dark:text-slate-300">
               <span><strong>Status:</strong> {selectedDay.log.status}</span>
-              <span><strong>Time In:</strong> {selectedDay.log.time_in ? new Date(selectedDay.log.time_in).toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: 'numeric', minute: '2-digit' }) : '—'}</span>
-              <span><strong>Time Out:</strong> {selectedDay.log.time_out ? new Date(selectedDay.log.time_out).toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: 'numeric', minute: '2-digit' }) : '—'}</span>
+              <span><strong>Time In:</strong> {selectedDay.log.time_in ? new Date(selectedDay.log.time_in).toLocaleTimeString('en-US', { timeZone: 'Asia/Riyadh', hour: 'numeric', minute: '2-digit' }) : '—'}</span>
+              <span><strong>Time Out:</strong> {selectedDay.log.time_out ? new Date(selectedDay.log.time_out).toLocaleTimeString('en-US', { timeZone: 'Asia/Riyadh', hour: 'numeric', minute: '2-digit' }) : '—'}</span>
             </div>
           ) : <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-300">No attendance record for this date.</p>}
         </div>

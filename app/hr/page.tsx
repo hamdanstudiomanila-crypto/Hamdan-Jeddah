@@ -68,11 +68,11 @@ export default function HRDashboard() {
   const [loadingData, setLoadingData] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Filter States — defaults to "today" (Philippine time) so HR sees
+  // Filter States — defaults to "today" (Jeddah time) so HR sees
   // today's attendance by default instead of the entire history.
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDate, setSelectedDate] = useState(() =>
-    new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila' }).format(new Date())
+    new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Riyadh' }).format(new Date())
   );
   // Cutoff period filter (1-15 / 16-end of month) -- when set, this takes over
   // from selectedDate for payroll-period review instead of a single day.
@@ -195,7 +195,7 @@ export default function HRDashboard() {
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [exportCutoff, setExportCutoff] = useState('');
   const [rawExportMonth, setRawExportMonth] = useState(() =>
-    new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila', year: 'numeric', month: '2-digit' })
+    new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Riyadh', year: 'numeric', month: '2-digit' })
       .format(new Date())
       .slice(0, 7)
   );
@@ -253,7 +253,7 @@ export default function HRDashboard() {
     reportWindow.opener = null;
 
     const generatedAt = new Date().toLocaleString('en-US', {
-      timeZone: 'Asia/Manila',
+      timeZone: 'Asia/Riyadh',
       month: 'long',
       day: 'numeric',
       year: 'numeric',
@@ -283,7 +283,7 @@ export default function HRDashboard() {
         <div class="header">
           <div class="brand">HAMDAN ENGINEERING</div>
           <h1>${escapeHtml(title)}</h1>
-          <div class="meta">Period: ${escapeHtml(periodLabel)}<br/>Generated: ${escapeHtml(generatedAt)} (Philippine time)<br/>Records: ${rows.length}</div>
+          <div class="meta">Period: ${escapeHtml(periodLabel)}<br/>Generated: ${escapeHtml(generatedAt)} (Jeddah time)<br/>Records: ${rows.length}</div>
         </div>
         <table><thead><tr>${headers.map((h) => `<th>${escapeHtml(h)}</th>`).join('')}</tr></thead>
         <tbody>${rows.map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(cell)}</td>`).join('')}</tr>`).join('')}</tbody></table>
@@ -462,7 +462,7 @@ export default function HRDashboard() {
       return (a.profiles?.full_name || '').localeCompare(b.profiles?.full_name || '');
     });
     const formatTime = (iso: string | null) => iso
-      ? new Date(iso).toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit', second: '2-digit' })
+      ? new Date(iso).toLocaleTimeString('en-US', { timeZone: 'Asia/Riyadh', hour: '2-digit', minute: '2-digit', second: '2-digit' })
       : '-';
     const rows = logs.map((log) => {
       const isLate = log.status?.toLowerCase() === 'late' && !!log.time_in;
@@ -595,7 +595,7 @@ export default function HRDashboard() {
   const [quickViewProfile, setQuickViewProfile] = useState<Profile | null>(null);
   const [leaveCalendarOpen, setLeaveCalendarOpen] = useState(false);
   const [leaveCalendarMonth, setLeaveCalendarMonth] = useState(() =>
-    new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila', year: 'numeric', month: '2-digit' }).format(new Date()).slice(0, 7)
+    new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Riyadh', year: 'numeric', month: '2-digit' }).format(new Date()).slice(0, 7)
   );
   const [selectedCalendarDate, setSelectedCalendarDate] = useState<string | null>(null);
   const [darkMode, setDarkMode] = useState(false);
@@ -1038,12 +1038,12 @@ export default function HRDashboard() {
   };
 
   // Computes Present/Late the same way as everywhere else in the app,
-  // based on the claimed time-in in Philippine time. Only relevant for
+  // based on the claimed time-in in Jeddah time. Only relevant for
   // TimeIn-type disputes -- TimeOut disputes don't change the Present/
   // Late status, since that's determined solely by time_in.
   const computeStatusForTime = (isoString: string) => {
     const parts = new Intl.DateTimeFormat('en-US', {
-      timeZone: 'Asia/Manila',
+      timeZone: 'Asia/Riyadh',
       hour: '2-digit',
       minute: '2-digit',
       hour12: false,
@@ -1227,7 +1227,7 @@ export default function HRDashboard() {
   // misfiling records near midnight (PH is UTC+8, so a log_time_in of
   // "2026-07-05T17:30:00Z" is already July 6 in Manila).
   const toManilaDateString = (iso: string) =>
-    new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila' }).format(new Date(iso));
+    new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Riyadh' }).format(new Date(iso));
 
   // Cutoff key format: "YYYY-MM:H1" (days 1-15) or "YYYY-MM:H2" (days
   // 16 to end of month) -- the standard PH semi-monthly payroll split.
@@ -1293,7 +1293,7 @@ export default function HRDashboard() {
   // directly in Supabase (e.g. "late" instead of "Late").
   const getMinutesLate = (timeInIso: string) => {
     const parts = new Intl.DateTimeFormat('en-CA', {
-      timeZone: 'Asia/Manila',
+      timeZone: 'Asia/Riyadh',
       hour: '2-digit',
       minute: '2-digit',
       hour12: false,
@@ -1687,7 +1687,7 @@ export default function HRDashboard() {
   };
 
   const todayManila = useMemo(() => {
-    const fmt = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila' });
+    const fmt = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Riyadh' });
     return fmt.format(new Date()); // "YYYY-MM-DD"
   }, []);
 
@@ -1718,7 +1718,7 @@ export default function HRDashboard() {
   }).length;
   const upcomingHolidaysCount = holidays.filter((holiday) => holiday.holiday_date >= todayManila).length;
   const announcementModuleLabel = announcementUpdatedAt
-    ? `Updated ${new Date(announcementUpdatedAt).toLocaleDateString('en-US', { timeZone: 'Asia/Manila', month: 'short', day: 'numeric' })}`
+    ? `Updated ${new Date(announcementUpdatedAt).toLocaleDateString('en-US', { timeZone: 'Asia/Riyadh', month: 'short', day: 'numeric' })}`
     : 'Create an announcement';
 
   // Employees with no time-in yet today. This is intentionally a live,
@@ -1774,7 +1774,7 @@ export default function HRDashboard() {
   const disputeClaimed = (d: AttendanceDispute) => ((d.dispute_type || 'TimeIn') === 'TimeOut' ? d.claimed_time_out : d.claimed_time_in);
   const disputeFieldLabel = (d: AttendanceDispute) => ((d.dispute_type || 'TimeIn') === 'TimeOut' ? 'Time-Out' : 'Time-In');
   const formatPh = (iso: string) =>
-    new Date(iso).toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    new Date(iso).toLocaleTimeString('en-US', { timeZone: 'Asia/Riyadh', hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
   const globalEmployeeMatches = useMemo(() => {
     const query = globalEmployeeSearch.trim().toLowerCase();
@@ -2010,7 +2010,7 @@ export default function HRDashboard() {
           <div className="flex items-center justify-between sm:justify-end gap-3 flex-shrink-0">
             <span className="text-[10px] text-slate-400 font-medium">
               <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5" />
-              {lastUpdatedAt ? `Updated ${lastUpdatedAt.toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit' })}` : 'Loading live data'}
+              {lastUpdatedAt ? `Updated ${lastUpdatedAt.toLocaleTimeString('en-US', { timeZone: 'Asia/Riyadh', hour: '2-digit', minute: '2-digit' })}` : 'Loading live data'}
             </span>
             <button type="button" onClick={refreshAllData} disabled={refreshing} className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-2 text-[10px] font-bold text-slate-700 transition hover:bg-slate-200 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700">
               <RefreshCw size={13} className={refreshing ? 'animate-spin' : ''} /> Refresh
@@ -2262,9 +2262,9 @@ export default function HRDashboard() {
                   {paginatedAttendance.map((log) => (
                     <tr key={log.id} className="hover:bg-slate-50 transition">
                       <td className="px-4 py-3 font-medium text-slate-900 text-xs">{log.profiles?.full_name}</td>
-                      <td className="px-4 py-3 text-slate-600 text-xs">{log.log_date ? new Date(log.log_date).toLocaleDateString('en-US', { timeZone: 'Asia/Manila', month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}</td>
-                      <td className="px-4 py-3 text-slate-600 text-xs">{log.time_in ? new Date(log.time_in).toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit', second: '2-digit' }) : 'N/A'}</td>
-                      <td className="px-4 py-3 text-slate-600 text-xs">{log.time_out ? new Date(log.time_out).toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—'}</td>
+                      <td className="px-4 py-3 text-slate-600 text-xs">{log.log_date ? new Date(log.log_date).toLocaleDateString('en-US', { timeZone: 'Asia/Riyadh', month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}</td>
+                      <td className="px-4 py-3 text-slate-600 text-xs">{log.time_in ? new Date(log.time_in).toLocaleTimeString('en-US', { timeZone: 'Asia/Riyadh', hour: '2-digit', minute: '2-digit', second: '2-digit' }) : 'N/A'}</td>
+                      <td className="px-4 py-3 text-slate-600 text-xs">{log.time_out ? new Date(log.time_out).toLocaleTimeString('en-US', { timeZone: 'Asia/Riyadh', hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—'}</td>
                       <td className="px-4 py-3"><span className={statusTagClass(log.status)}>{log.status}</span></td>
                     </tr>
                   ))}

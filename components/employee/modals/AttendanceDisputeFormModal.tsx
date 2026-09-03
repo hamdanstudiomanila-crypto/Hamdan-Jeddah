@@ -118,14 +118,14 @@ export default function AttendanceDisputeFormModal({ open, onClose, disputeChoic
                   value={disputeForm.date}
                   onChange={(e) => handleDisputeDateChange(e.target.value)}
                   disabled={disputeTypeLocked.current && !!disputeForm.attendanceLogId}
-                  max={new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila' }).format(new Date())}
+                  max={new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Riyadh' }).format(new Date())}
                 />
                 {!disputeTypeLocked.current && disputeForm.type === 'TimeOut' && disputeForm.date && !disputeForm.attendanceLogId && (
                   <p className="text-orange-600 text-[11px] font-medium mb-3 ml-1">⚠️ No time-in recorded on that date yet — you can&apos;t dispute a time-out without one.</p>
                 )}
                 <div className="mb-3" />
 
-                <label className="label-branded">{disputeForm.type === 'TimeOut' ? 'Time You Actually Left (Philippine Time)' : 'Time You Actually Arrived (Philippine Time)'}</label>
+                <label className="label-branded">{disputeForm.type === 'TimeOut' ? 'Time You Actually Left (Jeddah Time)' : 'Time You Actually Arrived (Jeddah Time)'}</label>
                 <input
                   type="time"
                   className="input-field mb-4"

@@ -333,7 +333,7 @@ export default function EmployeeDashboard() {
 
   const fetchWeatherAdvisory = async () => {
     try {
-      const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila' }).format(new Date());
+      const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Riyadh' }).format(new Date());
       const { data, error } = await supabase
         .from('weather_advisories')
         .select('id, location_name, advisory_date, headline, message, severity, temperature_c, precipitation_probability, weather_code, commute_window, source_name, generated_at')
@@ -393,11 +393,11 @@ export default function EmployeeDashboard() {
   useEffect(() => {
     const checkTimeOutReminder = () => {
       const now = new Date();
-      // Check Philippine time specifically (not the device's local
+      // Check Jeddah time specifically (not the device's local
       // time) so the reminder is correct regardless of how the
       // employee's device clock/timezone is set.
       const manilaHour = parseInt(
-        new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Manila', hour: '2-digit', hour12: false }).format(now),
+        new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Riyadh', hour: '2-digit', hour12: false }).format(now),
         10
       );
 
@@ -483,7 +483,7 @@ export default function EmployeeDashboard() {
           setAnnouncementUpdatedAt(
             newRow.updated_at
               ? new Date(newRow.updated_at).toLocaleString('en-US', {
-                  timeZone: 'Asia/Manila',
+                  timeZone: 'Asia/Riyadh',
                   month: 'short',
                   day: 'numeric',
                   year: 'numeric',
@@ -592,10 +592,10 @@ export default function EmployeeDashboard() {
     }
     setCurrentUserId(user.id);
 
-    // Use the Manila calendar date, not the browser's local/UTC date --
+    // Use the Jeddah calendar date, not the browser's local/UTC date --
     // otherwise an employee whose device is set to a timezone behind
     // UTC could see the wrong "today" near midnight.
-    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila' }).format(new Date());
+    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Riyadh' }).format(new Date());
 
     const year = new Date().getFullYear();
     const [profileRes, govIdRes, historyRes, leavesCountRes, disputesCountRes, payslipsCountRes, supportCountRes, leaveCreditsRes] = await Promise.all([
@@ -668,7 +668,7 @@ export default function EmployeeDashboard() {
       setAnnouncementUpdatedAt(
         data?.updated_at
           ? new Date(data.updated_at).toLocaleString('en-US', {
-              timeZone: 'Asia/Manila',
+              timeZone: 'Asia/Riyadh',
               month: 'short',
               day: 'numeric',
               year: 'numeric',
@@ -711,12 +711,12 @@ export default function EmployeeDashboard() {
   };
 
   // Called when the employee clicks Time Out.
-  // If it's before 7PM Manila time, show a warning first.
+  // If it's before 7PM Jeddah time, show a warning first.
   const handleTimeOutClick = () => {
     if (!attendanceRecordingEnabled) { setMessage('Error: Attendance recording is temporarily unavailable.'); return; }
     const now = new Date();
     const manilaHour = parseInt(
-      new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Manila', hour: '2-digit', hour12: false }).format(now),
+      new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Riyadh', hour: '2-digit', hour12: false }).format(now),
       10
     );
     if (manilaHour < timeOutReminderHour) {
@@ -1080,8 +1080,8 @@ export default function EmployeeDashboard() {
       setLeaveMsg({ type: 'error', text: 'Leave requests are temporarily disabled by the administrator.' });
       return;
     }
-    const currentManilaDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila' }).format(new Date());
-    const noticeDays = Math.floor((new Date(`${leaveForm.start_date}T00:00:00+08:00`).getTime() - new Date(`${currentManilaDate}T00:00:00+08:00`).getTime()) / 86_400_000);
+    const currentManilaDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Riyadh' }).format(new Date());
+    const noticeDays = Math.floor((new Date(`${leaveForm.start_date}T00:00:00+03:00`).getTime() - new Date(`${currentManilaDate}T00:00:00+03:00`).getTime()) / 86_400_000);
     const minimumNotice = Number(seasonalSettings.leave_request_min_notice_days || 0);
     if (noticeDays < minimumNotice) {
       setLeaveMsg({ type: 'error', text: `Leave requests require at least ${minimumNotice} day${minimumNotice === 1 ? '' : 's'} notice.` });
@@ -1124,7 +1124,7 @@ export default function EmployeeDashboard() {
     }
     const targetLeave = myLeaves.find((leave) => leave.id === leaveId);
     const leadHours = Number(seasonalSettings.leave_cancel_before_start_hours || 0);
-    if (targetLeave?.start_date && new Date(`${targetLeave.start_date}T00:00:00+08:00`).getTime() - Date.now() < leadHours * 3_600_000) {
+    if (targetLeave?.start_date && new Date(`${targetLeave.start_date}T00:00:00+03:00`).getTime() - Date.now() < leadHours * 3_600_000) {
       alert(`Leave requests can only be cancelled at least ${leadHours} hour${leadHours === 1 ? '' : 's'} before they start.`);
       return;
     }
@@ -1262,7 +1262,7 @@ export default function EmployeeDashboard() {
   const disputeClaimed = (d: any) => ((d.dispute_type || 'TimeIn') === 'TimeOut' ? d.claimed_time_out : d.claimed_time_in);
   const disputeFieldLabel = (d: any) => ((d.dispute_type || 'TimeIn') === 'TimeOut' ? 'Time-Out' : 'Time-In');
   const formatDisputeTimePh = (iso: string) =>
-    new Date(iso).toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit' });
+    new Date(iso).toLocaleTimeString('en-US', { timeZone: 'Asia/Riyadh', hour: '2-digit', minute: '2-digit' });
 
   // Whether the currently-open dispute modal was launched from a
   // specific row (Late tag / missed time-out link -- type is fixed) or
@@ -1318,7 +1318,7 @@ export default function EmployeeDashboard() {
   // "choice" screen is actually worth disputing.
   const isTimeInOnTime = (timeInIso: string) => {
     const parts = new Intl.DateTimeFormat('en-CA', {
-      timeZone: 'Asia/Manila',
+      timeZone: 'Asia/Riyadh',
       hour: '2-digit',
       minute: '2-digit',
       hour12: false,
@@ -1329,7 +1329,7 @@ export default function EmployeeDashboard() {
 
   const isTimeOutComplete = (timeOutIso: string) => {
     const manilaHour = parseInt(
-      new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Manila', hour: '2-digit', hour12: false }).format(new Date(timeOutIso)),
+      new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Riyadh', hour: '2-digit', hour12: false }).format(new Date(timeOutIso)),
       10
     );
     return manilaHour >= timeOutReminderHour;
@@ -1369,7 +1369,7 @@ export default function EmployeeDashboard() {
       return;
     }
     const disputeWindowDays = Number(seasonalSettings.attendance_dispute_window_days || 7);
-    if (disputeForm.date && Date.now() - new Date(`${disputeForm.date}T23:59:59+08:00`).getTime() > disputeWindowDays * 86_400_000) {
+    if (disputeForm.date && Date.now() - new Date(`${disputeForm.date}T23:59:59+03:00`).getTime() > disputeWindowDays * 86_400_000) {
       setDisputeMsg({ type: 'error', text: `Attendance disputes must be filed within ${disputeWindowDays} day${disputeWindowDays === 1 ? '' : 's'} of the record.` });
       return;
     }
@@ -1402,8 +1402,8 @@ export default function EmployeeDashboard() {
 
       // disputeForm.timeLocal is a PH wall-clock time like "08:05";
       // combine with the date and convert to a real UTC timestamp,
-      // same +08:00 fixed-offset approach used elsewhere in the app.
-      const claimedTimeISO = new Date(`${disputeForm.date}T${disputeForm.timeLocal}:00+08:00`).toISOString();
+      // same +03:00 fixed-offset approach used elsewhere in the app.
+      const claimedTimeISO = new Date(`${disputeForm.date}T${disputeForm.timeLocal}:00+03:00`).toISOString();
 
       // Snapshot what time_in/time_out currently is (if a log already
       // exists for this day), so we can show a clear "before -> after"
@@ -1511,7 +1511,7 @@ export default function EmployeeDashboard() {
   // row is eligible for a missed-time-out dispute (only past days;
   // today's row already has its own Time Out button/reminder).
   const todayManila = useMemo(
-    () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila' }).format(new Date()),
+    () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Riyadh' }).format(new Date()),
     []
   );
 
@@ -1578,7 +1578,7 @@ export default function EmployeeDashboard() {
   // don't store an exact minutes-late value anywhere.
   const getMinutesLate = (timeInIso: string) => {
     const parts = new Intl.DateTimeFormat('en-CA', {
-      timeZone: 'Asia/Manila',
+      timeZone: 'Asia/Riyadh',
       hour: '2-digit',
       minute: '2-digit',
       hour12: false,
@@ -1889,8 +1889,8 @@ export default function EmployeeDashboard() {
     const headers = ['Date', 'Day', 'Status', 'Time In', 'Time Out'];
     const rows = filteredHistory.map((log) => {
       const weekday = new Date(log.log_date).toLocaleDateString('en-US', { weekday: 'long' });
-      const timeIn = log.time_in ? new Date(log.time_in).toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit' }) : '';
-      const timeOut = log.time_out ? new Date(log.time_out).toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit' }) : '';
+      const timeIn = log.time_in ? new Date(log.time_in).toLocaleTimeString('en-US', { timeZone: 'Asia/Riyadh', hour: '2-digit', minute: '2-digit' }) : '';
+      const timeOut = log.time_out ? new Date(log.time_out).toLocaleTimeString('en-US', { timeZone: 'Asia/Riyadh', hour: '2-digit', minute: '2-digit' }) : '';
       return [log.log_date, weekday, log.status ?? '', timeIn, timeOut];
     });
     const csv = [headers, ...rows].map((r) => r.map(escapeCsv).join(',')).join('\r\n');
@@ -1914,8 +1914,8 @@ export default function EmployeeDashboard() {
     }
     const rowsHtml = filteredHistory.map((log) => {
       const weekday = new Date(log.log_date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-      const timeIn = log.time_in ? new Date(log.time_in).toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit' }) : '--:--';
-      const timeOut = log.time_out ? new Date(log.time_out).toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit' }) : '--:--';
+      const timeIn = log.time_in ? new Date(log.time_in).toLocaleTimeString('en-US', { timeZone: 'Asia/Riyadh', hour: '2-digit', minute: '2-digit' }) : '--:--';
+      const timeOut = log.time_out ? new Date(log.time_out).toLocaleTimeString('en-US', { timeZone: 'Asia/Riyadh', hour: '2-digit', minute: '2-digit' }) : '--:--';
       return `<tr><td>${weekday}</td><td>${log.log_date}</td><td><span class="tag ${(log.status ?? '').toLowerCase()}">${log.status ?? ''}</span></td><td>${timeIn}</td><td>${timeOut}</td></tr>`;
     }).join('');
 
@@ -1941,7 +1941,7 @@ export default function EmployeeDashboard() {
         </head>
         <body>
           <h1>${profile?.full_name || 'Employee'} -- Attendance History</h1>
-          <p class="sub">${profile?.employee_id ? `ID: ${profile.employee_id} · ` : ''}${monthFilter ? formatMonthLabel(monthFilter) : 'All records'} · Generated ${new Date().toLocaleDateString('en-US', { timeZone: 'Asia/Manila', month: 'long', day: 'numeric', year: 'numeric' })}</p>
+          <p class="sub">${profile?.employee_id ? `ID: ${profile.employee_id} · ` : ''}${monthFilter ? formatMonthLabel(monthFilter) : 'All records'} · Generated ${new Date().toLocaleDateString('en-US', { timeZone: 'Asia/Riyadh', month: 'long', day: 'numeric', year: 'numeric' })}</p>
           <table>
             <thead><tr><th>Day</th><th>Date</th><th>Status</th><th>Time In</th><th>Time Out</th></tr></thead>
             <tbody>${rowsHtml || '<tr><td colspan="5">No records.</td></tr>'}</tbody>
@@ -2342,8 +2342,8 @@ export default function EmployeeDashboard() {
                 <div className="flex min-h-6 flex-col justify-center">
                 {todayLog?.time_in && (
                   <p className="text-center text-slate-400 text-xs">
-                    In: {new Date(todayLog.time_in).toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                    {todayLog.time_out && <> · Out: {new Date(todayLog.time_out).toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit', second: '2-digit' })}</>}
+                    In: {new Date(todayLog.time_in).toLocaleTimeString('en-US', { timeZone: 'Asia/Riyadh', hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                    {todayLog.time_out && <> · Out: {new Date(todayLog.time_out).toLocaleTimeString('en-US', { timeZone: 'Asia/Riyadh', hour: '2-digit', minute: '2-digit', second: '2-digit' })}</>}
                   </p>
                 )}
                 {!checkingNetwork && officeNetworkAllowed === false && !(todayLog?.time_out) && (
@@ -2517,8 +2517,8 @@ export default function EmployeeDashboard() {
                         <span className={`${statusTagClass(log.status)} inline-flex w-[76px] items-center justify-center justify-self-center whitespace-nowrap`}>{log.status}</span>
                           <div className="min-w-0 text-right">
                             <div className="whitespace-nowrap font-semibold text-slate-700 text-xs">
-                              {log.time_in ? new Date(log.time_in).toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit' }) : '--:--'}
-                              {log.time_out && <> – {new Date(log.time_out).toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit' })}</>}
+                              {log.time_in ? new Date(log.time_in).toLocaleTimeString('en-US', { timeZone: 'Asia/Riyadh', hour: '2-digit', minute: '2-digit' }) : '--:--'}
+                              {log.time_out && <> – {new Date(log.time_out).toLocaleTimeString('en-US', { timeZone: 'Asia/Riyadh', hour: '2-digit', minute: '2-digit' })}</>}
                             </div>
                             {/* Single "Dispute" button -- lets the employee pick Time In or
                                 Time Out on the choice screen, instead of two separate,

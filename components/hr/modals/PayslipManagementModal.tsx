@@ -34,18 +34,18 @@ export default function PayslipManagementModal({ open, onClose, onBack, deletePa
                       <p className="text-sm font-semibold text-slate-800 truncate">{ps.cutoff_label}</p>
                       <p className="text-slate-400 text-[10px] truncate">{ps.file_name}</p>
                       <p className="text-slate-300 text-[10px]">
-                        {new Date(ps.uploaded_at).toLocaleDateString('en-US', { timeZone: 'Asia/Manila', month: 'short', day: 'numeric', year: 'numeric' })}
+                        {new Date(ps.uploaded_at).toLocaleDateString('en-US', { timeZone: 'Asia/Riyadh', month: 'short', day: 'numeric', year: 'numeric' })}
                       </p>
                       {ps.published ? (
                         <span className="tag-present inline-block mt-1">
-                          Published{ps.published_at ? ` · ${new Date(ps.published_at).toLocaleDateString('en-US', { timeZone: 'Asia/Manila', month: 'short', day: 'numeric' })}` : ''}
+                          Published{ps.published_at ? ` · ${new Date(ps.published_at).toLocaleDateString('en-US', { timeZone: 'Asia/Riyadh', month: 'short', day: 'numeric' })}` : ''}
                         </span>
                       ) : (
                         <span className="tag-excused inline-block mt-1">Not yet published</span>
                       )}
                       {ps.published && (
                         <span className={`inline-block mt-1 ml-1 rounded-full px-2 py-1 text-[9px] font-extrabold uppercase tracking-wide ${ps.acknowledged_at ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
-                          {ps.acknowledged_at ? `Acknowledged · ${new Date(ps.acknowledged_at).toLocaleDateString('en-US', { timeZone: 'Asia/Manila', month: 'short', day: 'numeric' })}` : 'Not acknowledged'}
+                          {ps.acknowledged_at ? `Acknowledged · ${new Date(ps.acknowledged_at).toLocaleDateString('en-US', { timeZone: 'Asia/Riyadh', month: 'short', day: 'numeric' })}` : 'Not acknowledged'}
                         </span>
                       )}
                     </div>

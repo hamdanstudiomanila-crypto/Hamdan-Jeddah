@@ -41,7 +41,7 @@ describe('account activation permissions', () => {
 describe('seasonal portal scope', () => {
   it('enables HR only when Employee and HR scope is selected', () => {
     const settings = { ...DEFAULT_APP_SETTINGS, seasonal_theme_enabled: true, seasonal_theme_scope: 'employee_and_hr' };
-    expect(resolveSeasonalTheme(settings, 'hr', new Date('2026-12-15T00:00:00+08:00')).active).toBe(true);
-    expect(resolveSeasonalTheme({ ...settings, seasonal_theme_scope: 'employee_only' }, 'hr', new Date('2026-12-15T00:00:00+08:00')).active).toBe(false);
+    expect(resolveSeasonalTheme(settings, 'hr', new Date('2026-12-15T00:00:00+03:00')).active).toBe(true);
+    expect(resolveSeasonalTheme({ ...settings, seasonal_theme_scope: 'employee_only' }, 'hr', new Date('2026-12-15T00:00:00+03:00')).active).toBe(false);
   });
 });

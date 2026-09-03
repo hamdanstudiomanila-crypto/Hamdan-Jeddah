@@ -28,7 +28,7 @@ function normalizeVariant(value: AppSettingsValues[string]): SeasonalThemeVarian
 
 function manilaDate(now: Date) {
   return new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Manila', year: 'numeric', month: '2-digit', day: '2-digit',
+    timeZone: 'Asia/Riyadh', year: 'numeric', month: '2-digit', day: '2-digit',
   }).format(now);
 }
 
