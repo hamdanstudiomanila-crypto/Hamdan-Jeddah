@@ -281,13 +281,13 @@ export default function HRDashboard() {
         @media print { .no-print { display: none !important; } }
       </style></head><body>
         <div class="header">
-          <div class="brand">HAMDAN ENGINEERING</div>
+          <div class="brand">HAMDAN STUDIO</div>
           <h1>${escapeHtml(title)}</h1>
           <div class="meta">Period: ${escapeHtml(periodLabel)}<br/>Generated: ${escapeHtml(generatedAt)} (Jeddah time)<br/>Records: ${rows.length}</div>
         </div>
         <table><thead><tr>${headers.map((h) => `<th>${escapeHtml(h)}</th>`).join('')}</tr></thead>
         <tbody>${rows.map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(cell)}</td>`).join('')}</tr>`).join('')}</tbody></table>
-        <div class="footer">Hamdan Engineering · ${escapeHtml(title)}</div>
+        <div class="footer">Hamdan Studio · ${escapeHtml(title)}</div>
         <script>window.addEventListener('load',function(){setTimeout(function(){window.print();},250);});<\/script>
       </body></html>`);
     reportWindow.document.close();
@@ -1964,7 +1964,7 @@ export default function HRDashboard() {
       <div className="seasonal-content relative z-[3] max-w-7xl mx-auto space-y-3 sm:space-y-4 md:space-y-5">
         {/* Header */}
         <header className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_4px_18px_rgba(15,23,42,0.05)] dark:border-slate-700 dark:bg-[#292f2b] sm:p-4">
-          <div className="min-w-0"><p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-green-700 dark:text-green-300">Hamdan Engineering</p><h1 className="mt-0.5 truncate text-xl font-bold leading-tight text-slate-950 dark:text-white sm:text-2xl">HR Dashboard</h1><p className="mt-1 hidden text-xs text-slate-600 dark:text-slate-300 sm:block">People, attendance, and employee operations.</p></div>
+          <div className="min-w-0"><p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-green-700 dark:text-green-300">Hamdan Studio</p><h1 className="mt-0.5 truncate text-xl font-bold leading-tight text-slate-950 dark:text-white sm:text-2xl">HR Dashboard</h1><p className="mt-1 hidden text-xs text-slate-600 dark:text-slate-300 sm:block">People, attendance, and employee operations.</p></div>
           <div className="flex flex-none items-center gap-1.5">
             <button type="button" onClick={toggleTheme} className="grid h-11 w-11 place-items-center rounded-full border border-slate-200 text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:!text-white dark:hover:bg-slate-800 lg:hidden" aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}>{darkMode ? <Sun size={18}/> : <Moon size={18}/>}</button>
             <button type="button" onClick={() => setActionCenterOpen(true)} className="relative grid h-11 w-11 place-items-center rounded-full border border-slate-200 text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:!text-white dark:hover:bg-slate-800" aria-label={`Open notifications, ${pendingHrActionCount} pending HR actions`}><Bell size={18}/>{pendingHrActionCount ? <span className="absolute -right-0.5 -top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-red-500 px-1 text-[9px] font-black text-white">{pendingHrActionCount > 9 ? '9+' : pendingHrActionCount}</span> : null}</button>

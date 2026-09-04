@@ -15,9 +15,9 @@ export type SeasonalThemeResolution = {
 };
 
 export const SEASONAL_THEME_PRESENTATION: Record<SeasonalThemeVariant, { label: string; greeting: string; symbol: string; particle: string; bannerTone: string }> = {
-  christmas: { label: 'Filipino Christmas', greeting: 'Maligayang Pasko mula sa Hamdan Engineering', symbol: '✦', particle: '❄', bannerTone: 'from-emerald-900 via-green-800 to-red-900' },
+  christmas: { label: 'Filipino Christmas', greeting: 'Maligayang Pasko mula sa Hamdan Studio', symbol: '✦', particle: '❄', bannerTone: 'from-emerald-900 via-green-800 to-red-900' },
   halloween: { label: 'Folklore Halloween', greeting: 'Ingat at magsaya ngayong gabi, Hamdan team', symbol: '◈', particle: '◆', bannerTone: 'from-slate-950 via-purple-950 to-orange-900' },
-  new_year: { label: 'Filipino New Year', greeting: 'Manigong Bagong Taon mula sa Hamdan Engineering', symbol: '✧', particle: '✦', bannerTone: 'from-slate-950 via-blue-950 to-amber-800' },
+  new_year: { label: 'Filipino New Year', greeting: 'Manigong Bagong Taon mula sa Hamdan Studio', symbol: '✧', particle: '✦', bannerTone: 'from-slate-950 via-blue-950 to-amber-800' },
   rainy: { label: 'Rainy Season', greeting: 'Mag-ingat sa ulan at biyahe, Hamdan team', symbol: '☂', particle: '│', bannerTone: 'from-cyan-950 via-blue-900 to-slate-700' },
   sunny: { label: 'Tropical Sunshine', greeting: 'Maliwanag at masiglang araw, Hamdan team', symbol: '☀', particle: '✿', bannerTone: 'from-amber-700 via-orange-600 to-green-700' },
 };

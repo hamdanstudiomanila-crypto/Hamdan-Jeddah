@@ -2195,7 +2195,7 @@ export default function EmployeeDashboard() {
         {/* Header */}
         <header className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_4px_18px_rgba(15,23,42,0.04)] dark:bg-[#292f2b] sm:p-4">
           <div className="min-w-0">
-            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#16a34a] lg:hidden">Hamdan Engineering</p>
+            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#16a34a] lg:hidden">Hamdan Studio</p>
             <h1 className="mt-0.5 truncate text-xl font-bold leading-tight sm:text-2xl">{profile?.full_name || 'Employee'}</h1>
             <p className="mt-1 truncate text-xs font-semibold uppercase tracking-wide text-slate-500">{profile?.designation || 'Employee'}</p>
           </div>

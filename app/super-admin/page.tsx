@@ -1012,7 +1012,7 @@ export default function SuperAdminDashboard() {
               </div>
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h1 className="text-base leading-tight text-slate-950 dark:text-white sm:text-lg md:text-xl">HAMDAN ENGINEERING</h1>
+                  <h1 className="text-base leading-tight text-slate-950 dark:text-white sm:text-lg md:text-xl">HAMDAN STUDIO</h1>
                 </div>
                 <p className="mt-1 text-[11px] font-bold text-green-700 dark:text-green-400">
                   Super Administrator
