@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { Plus_Jakarta_Sans, Inter, Oswald } from "next/font/google";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/next";
@@ -64,10 +65,12 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`${jakarta.variable} ${inter.variable} ${oswald.variable} h-full antialiased`}
     >
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: themeInitializationScript }} />
-      </head>
       <body className="min-h-full flex flex-col">
+        <Script
+          id="theme-initialization"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{ __html: themeInitializationScript }}
+        />
         <ThemeRouteGuard />
         {children}
         <SpeedInsights />

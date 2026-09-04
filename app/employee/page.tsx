@@ -2007,7 +2007,11 @@ export default function EmployeeDashboard() {
   }
 
   return (
-    <main id="employee-dashboard-top" className={`employee-dashboard relative min-h-screen overflow-x-hidden p-3 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:p-4 sm:pb-[calc(6rem+env(safe-area-inset-bottom))] md:p-6 md:pb-[calc(6rem+env(safe-area-inset-bottom))] lg:p-8 ${seasonalTheme.active ? `seasonal-theme seasonal-${seasonalTheme.variant} seasonal-${seasonalTheme.intensity}` : ''}`}>
+    <main
+      id="employee-dashboard-top"
+      className={`employee-dashboard relative min-h-screen overflow-x-hidden p-3 sm:p-4 md:p-6 lg:p-8 ${seasonalTheme.active ? `seasonal-theme seasonal-${seasonalTheme.variant} seasonal-${seasonalTheme.intensity}` : ''}`}
+      style={{ paddingBottom: "calc(6rem + env(safe-area-inset-bottom))" }}
+    >
       <style jsx global>{`
         /* DARK MODE — neutral dark gray, not pure black. */
         .dark { color-scheme: dark; }
