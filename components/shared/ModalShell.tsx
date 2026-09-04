@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useId, useRef, type ReactNode } from 'react';
+import { X } from 'lucide-react';
 
 type ModalShellProps = {
   open: boolean;
@@ -134,10 +135,10 @@ export default function ModalShell({
             type="button"
             onClick={() => onCloseRef.current()}
             disabled={closeDisabled}
-            className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-slate-100 text-xl text-slate-500 transition hover:bg-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+            className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-slate-700 shadow-sm transition hover:bg-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-500 disabled:opacity-50 dark:!border-[#4b6152] dark:!bg-[#26342b] dark:!text-white dark:hover:!bg-[#324238]"
             aria-label={`Close ${title}`}
           >
-            ×
+            <X aria-hidden="true" size={20} strokeWidth={2.8} />
           </button>
         </header>
 

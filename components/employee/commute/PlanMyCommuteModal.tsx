@@ -661,7 +661,7 @@ export default function PlanMyCommuteModal({
                 ref={commuteCloseButtonRef}
                 type="button"
                 onClick={() => onClose()}
-                className="w-11 h-11 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center hover:bg-slate-200 transition flex-shrink-0"
+                className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-xl font-bold text-slate-700 shadow-sm transition hover:bg-slate-200 dark:!border-[#4b6152] dark:!bg-[#26342b] dark:!text-white"
                 aria-label="Close commute assistant"
               >
                 ×

@@ -2663,7 +2663,7 @@ export default function EmployeeDashboard() {
             </div>
             <button
               onClick={() => setShowAnnouncementToast(false)}
-              className="text-white/40 hover:text-white flex-shrink-0"
+              className="grid h-8 w-8 flex-shrink-0 place-items-center rounded-full bg-white/15 font-bold text-white transition hover:bg-white/25"
               aria-label="Close notification"
               type="button"
             >
@@ -2692,7 +2692,7 @@ export default function EmployeeDashboard() {
             </div>
             <button
               onClick={() => setDisputeResultToast(null)}
-              className="text-white/60 hover:text-white flex-shrink-0"
+              className="grid h-8 w-8 flex-shrink-0 place-items-center rounded-full bg-white/20 font-bold text-white transition hover:bg-white/30"
               aria-label="Close notification"
               type="button"
             >
@@ -2730,7 +2730,7 @@ export default function EmployeeDashboard() {
             </div>
             <button
               onClick={dismissReminder}
-              className="text-white/40 hover:text-white flex-shrink-0"
+              className="grid h-8 w-8 flex-shrink-0 place-items-center rounded-full bg-white/15 font-bold text-white transition hover:bg-white/25"
               aria-label="Close reminder"
               type="button"
             >

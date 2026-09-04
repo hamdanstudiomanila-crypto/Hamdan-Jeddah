@@ -107,8 +107,8 @@ export default function MobileAllToolsSheet(props: Props) {
             <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-green-700">Employee Menu</p>
             <h2 id="mobile-all-tools-title" className="text-lg font-bold text-slate-900">Account & Tools</h2>
           </div>
-          <button type="button" onClick={props.onClose} className="grid h-11 w-11 place-items-center rounded-full bg-slate-100 text-slate-600" aria-label="Close all tools">
-            <X size={19} />
+          <button type="button" onClick={props.onClose} className="grid h-11 w-11 place-items-center rounded-full border border-slate-200 bg-slate-100 text-slate-700 shadow-sm dark:!border-[#4b6152] dark:!bg-[#26342b] dark:!text-white" aria-label="Close all tools">
+            <X aria-hidden="true" size={20} strokeWidth={2.8} />
           </button>
         </div>
         <section className="mb-5 rounded-2xl border border-slate-200 bg-slate-50 p-3 text-left dark:bg-[#343b36]">
