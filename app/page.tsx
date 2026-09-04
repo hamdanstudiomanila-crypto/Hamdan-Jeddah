@@ -90,13 +90,6 @@ export default function LoginPage() {
         <h1 className="text-2xl sm:text-4xl md:text-6xl font-black text-gray-900 tracking-tight md:tracking-tighter leading-tight break-words">
           HAMDAN STUDIO
         </h1>
-        <div className="flex items-center justify-center gap-3 sm:gap-4 mt-4 sm:mt-6">
-          <div className="h-px w-10 sm:w-16 bg-blue-600"></div>
-          <p className="label-branded text-xs sm:text-base font-extrabold tracking-[0.2em] sm:tracking-[0.3em] whitespace-nowrap">
-           Consultants Company <br></br> Representative Office
-          </p>
-          <div className="h-px w-10 sm:w-16 bg-blue-600"></div>
-        </div>
       </div>
 
       {/* LOGIN CARD */}
