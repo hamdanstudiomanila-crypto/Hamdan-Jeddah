@@ -32,8 +32,8 @@ export default function SuperAdminQuickActions(props: Props) {
       <div className="grid grid-cols-4 gap-2 sm:gap-3">
         {actions.map(({ label, icon: Icon, action, system }) => (
           <button key={label} type="button" onClick={action} className="group relative flex min-h-24 min-w-0 flex-col items-center justify-center gap-2 overflow-hidden rounded-2xl border border-slate-200 bg-white px-1.5 py-3 text-center shadow-[0_8px_24px_rgba(15,23,42,0.07)] transition hover:-translate-y-0.5 hover:border-green-200 hover:shadow-lg dark:border-slate-700 dark:bg-[#292f2b] dark:hover:border-green-700 sm:px-3">
-            <span className={`relative grid h-11 w-11 place-items-center rounded-2xl text-white shadow-lg ring-1 ring-inset ring-white/40 dark:ring-white/75 ${system ? 'bg-gradient-to-br from-slate-600 to-slate-800' : 'bg-gradient-to-br from-emerald-500 to-green-700'}`}>
-              <span className="absolute inset-[3px] rounded-[13px] border border-white/35 dark:border-white/70" aria-hidden="true" />
+            <span className={`relative grid h-11 w-11 place-items-center rounded-2xl text-white shadow-lg ring-1 ring-inset ring-white/40 dark:ring-green-950 ${system ? 'bg-gradient-to-br from-slate-600 to-slate-800' : 'bg-gradient-to-br from-emerald-500 to-green-700'}`}>
+              <span className="absolute inset-[3px] rounded-[13px] border border-white/35 dark:border-green-950" aria-hidden="true" />
               <Icon aria-hidden="true" size={20} strokeWidth={2.2} />
             </span>
             <span className="relative w-full text-balance text-[10px] font-bold leading-tight text-slate-800 dark:!text-white sm:text-xs">{label}</span>
