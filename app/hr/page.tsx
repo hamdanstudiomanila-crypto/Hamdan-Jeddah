@@ -2186,7 +2186,7 @@ export default function HRDashboard() {
         </div>
 
         <div>
-          <EmployeesModal open={employeesListOpen} onClose={() => setEmployeesListOpen(false)} pageSize={PAGE_SIZE} employeesPage={employeesPage} employeesTotalPages={employeesTotalPages} initials={initials} loadingData={loadingData} openProfileChoice={openProfileChoice} paginatedProfiles={paginatedProfiles} profiles={profiles} setEmployeesPage={setEmployeesPage} />
+          <EmployeesModal open={employeesListOpen} onClose={() => setEmployeesListOpen(false)} pageSize={PAGE_SIZE} employeesPage={employeesPage} employeesTotalPages={employeesTotalPages} initials={initials} loadingData={loadingData} openProfileChoice={(profile) => { setEmployeesListOpen(false); openProfileChoice(profile); }} paginatedProfiles={paginatedProfiles} profiles={profiles} setEmployeesPage={setEmployeesPage} />
 
           {/* Attendance History */}
           <section id="attendance-history" className="card-style overflow-hidden !p-0 scroll-mt-4">

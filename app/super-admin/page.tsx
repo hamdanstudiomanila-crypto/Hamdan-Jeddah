@@ -497,6 +497,7 @@ export default function SuperAdminDashboard() {
   );
 
   const startEditLog = (log: any) => {
+    setAttendanceRecordsModalOpen(false);
     setEditingLog({
       id: log.id,
       employeeName: log.profiles?.full_name ?? 'Unknown',
