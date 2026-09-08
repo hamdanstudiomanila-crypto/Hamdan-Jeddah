@@ -4,7 +4,7 @@
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "employee-ask-ai-classify",
+        "path": "employee-ask-ai-classify-jeddah",
         "authentication": "headerAuth",
         "responseMode": "responseNode",
         "options": {}

@@ -4,7 +4,7 @@
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "employee-ask-ai-payslip",
+        "path": "employee-ask-ai-payslip-jeddah",
         "authentication": "headerAuth",
         "responseMode": "responseNode",
         "options": {}
