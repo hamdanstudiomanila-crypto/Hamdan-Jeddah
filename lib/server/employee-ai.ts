@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { resolveLanguageFollowUp } from '@/lib/employee/chat-language';
 import { classificationDates, designationPattern, cutoffDates, isRecord, payslipAnswer, payslipCutoffFromQuestion, periodDates, validateClassification, validatePayslip, type Classification, type ChatTurn } from '@/lib/employee/ask-ai';
 import { SYSTEM_KNOWLEDGE, type SystemKnowledgeMetric } from '@/lib/employee/system-knowledge';
 
@@ -54,11 +55,13 @@ export async function downloadOwnedPdf(client: SupabaseClient, path: string) {
 }
 type Context = { history?: ChatTurn[]; client: SupabaseClient; userId: string; fullName: string; question: string; language: string; payslipId?: string; payslipUnlocked?: boolean; requestId: string };
 export async function answerEmployeeQuestion(ctx: Context, call = workflowCall) {
-  const { client, userId, question, payslipId, requestId } = ctx;
-  const raw = await call(process.env.N8N_EMPLOYEE_AI_CLASSIFIER_URL, { question, history: ctx.history ?? [], current_date: periodDates('today').today, language: ctx.language, request_id: requestId });
+  const { client, userId, payslipId, requestId } = ctx;
+  const { question, language, history, missingTopic } = resolveLanguageFollowUp(ctx.question, ctx.language, ctx.history ?? []);
+  if (missingTopic) return { answer: language === 'en' ? 'Sure, I can answer in English. What would you like help with?' : 'Sige, sasagot ako sa Tagalog. Ano ang gusto mong malaman?' };
+  const raw = await call(process.env.N8N_EMPLOYEE_AI_CLASSIFIER_URL, { question, history, current_date: periodDates('today').today, language, request_id: requestId });
   let c: Classification;
   try { c = validateClassification(raw); } catch { throw new EmployeeAIError('I could not safely understand that question. Please rephrase.', 422); }
-  const tl = ctx.language === 'tl' || (ctx.language !== 'en' && c.language === 'tl');
+  const tl = language === 'tl' || (language !== 'en' && c.language === 'tl');
   if (c.intent === 'restricted_other_employee') return { answer: tl ? 'Sorry, hindi puwedeng ibahagi ang private information ng ibang employee.' : 'Sorry, we cannot share another employee’s private information.' };
   if (c.intent === 'how_to') {
     const entry = SYSTEM_KNOWLEDGE[c.metric as SystemKnowledgeMetric];
