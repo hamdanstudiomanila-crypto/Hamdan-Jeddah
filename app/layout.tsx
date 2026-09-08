@@ -44,7 +44,7 @@ const oswald = Oswald({
 });
 
 export const metadata: Metadata = {
-  title: "Hamdan Engineering",
+  title: "Hamdan Studio",
   description: "Employee attendance and account management portal",
   icons: {
     icon: "/images/h.png",

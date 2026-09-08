@@ -8,15 +8,18 @@ type TodayLog = {
   status: string | null;
 } | null;
 
-function getManilaClock() {
+function getJeddahClock() {
   const now = new Date();
   return {
-    time: now.toLocaleTimeString('en-GB', {
-      timeZone: 'Asia/Manila',
-      hour12: false,
+    time: now.toLocaleTimeString('en-US', {
+      timeZone: 'Asia/Riyadh',
+      hour: 'numeric',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true,
     }),
     date: now.toLocaleDateString('en-US', {
-      timeZone: 'Asia/Manila',
+      timeZone: 'Asia/Riyadh',
       weekday: 'long',
       year: 'numeric',
       month: 'long',
@@ -29,7 +32,7 @@ function EmployeeWorkClock({ todayLog }: { todayLog: TodayLog }) {
   const [clock, setClock] = useState(() => ({ time: '--:--:--', date: '' }));
 
   useEffect(() => {
-    const updateClock = () => setClock(getManilaClock());
+    const updateClock = () => setClock(getJeddahClock());
     updateClock();
     const timer = window.setInterval(updateClock, 1000);
     return () => window.clearInterval(timer);
@@ -74,8 +77,11 @@ function EmployeeWorkClock({ todayLog }: { todayLog: TodayLog }) {
       </div>
       <div className="relative flex min-w-0 flex-1 flex-col justify-center px-4 py-5 text-left sm:px-5">
         <span className={`absolute right-0 top-0 h-full w-1 bg-gradient-to-b transition-colors duration-300 ${workClockTone.rail}`} aria-hidden="true" />
-        <p className="text-[9px] font-extrabold uppercase tracking-[0.18em] text-slate-400">Philippine time</p>
-        <p className="mt-1 font-mono text-[clamp(2rem,8vw,3rem)] font-black leading-none tabular-nums tracking-[-0.08em] text-slate-950 dark:text-white">{clock.time}</p>
+        <p className="text-[9px] font-extrabold uppercase tracking-[0.18em] text-slate-400">Jeddah time</p>
+        <p className="mt-1 flex flex-wrap items-baseline gap-x-2 font-mono font-black leading-none tabular-nums text-slate-950 dark:text-white">
+          <span className="text-[clamp(2rem,8vw,3rem)] tracking-[-0.08em]">{clock.time.split(' ')[0]}</span>
+          <span className="text-2xl tracking-normal sm:text-3xl">{clock.time.split(' ')[1]}</span>
+        </p>
         <div className="mt-3 border-t border-dashed border-slate-200 pt-2 dark:border-slate-700">
           <p className="truncate text-[9px] font-bold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-300">{clock.date}</p>
         </div>

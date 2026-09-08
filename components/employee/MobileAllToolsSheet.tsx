@@ -75,7 +75,7 @@ export default function MobileAllToolsSheet(props: Props) {
     { label: 'Commute', icon: CarFront, action: props.onCommute },
     { label: 'Helpdesk', icon: Headphones, action: props.onHelpdesk },
     { label: 'Action Center', icon: BriefcaseBusiness, action: props.onActionCenter },
-    { label: 'Government IDs', icon: IdCard, action: props.onGovernmentIds },
+    { label: 'Employee Profile', icon: IdCard, action: props.onGovernmentIds },
   ];
   const toolTones = [
     'from-emerald-500 to-green-600',

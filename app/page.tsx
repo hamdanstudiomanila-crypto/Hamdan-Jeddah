@@ -88,15 +88,9 @@ export default function LoginPage() {
       {/* LARGE TITLE BOX */}
       <div className="relative z-10 bg-white/95 px-6 py-8 sm:px-12 sm:py-10 rounded-3xl shadow-2xl border border-gray-100 mb-8 text-center max-w-2xl w-full">
         <h1 className="text-2xl sm:text-4xl md:text-6xl font-black text-gray-900 tracking-tight md:tracking-tighter leading-tight break-words">
-          HAMDAN ENGINEERING 
+          Hamdan Studio
         </h1>
-        <div className="flex items-center justify-center gap-3 sm:gap-4 mt-4 sm:mt-6">
-          <div className="h-px w-10 sm:w-16 bg-blue-600"></div>
-          <p className="label-branded text-xs sm:text-base font-extrabold tracking-[0.2em] sm:tracking-[0.3em] whitespace-nowrap">
-           Consultants Company <br></br> Representative Office
-          </p>
-          <div className="h-px w-10 sm:w-16 bg-blue-600"></div>
-        </div>
+
       </div>
 
       {/* LOGIN CARD */}

@@ -37,24 +37,6 @@ const PayslipsModal = dynamic(() => import('@/components/employee/modals/Payslip
 const EmployeeDirectoryModal = dynamic(() => import('@/components/employee/modals/EmployeeDirectoryModal'));
 const CompanyCalendarModal = dynamic(() => import('@/components/employee/modals/CompanyCalendarModal'));
 
-function EyeIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z" />
-      <circle cx="12" cy="12" r="3" />
-    </svg>
-  );
-}
-
-function EyeOffIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a21.8 21.8 0 0 1 5.06-6.94M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a21.8 21.8 0 0 1-3.16 4.66M14.12 14.12a3 3 0 1 1-4.24-4.24" />
-      <line x1="1" y1="1" x2="23" y2="23" />
-    </svg>
-  );
-}
-
 function SunIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -280,14 +262,12 @@ export default function EmployeeDashboard() {
   // Government ID numbers / employment details -- fetched from a
   // separate, more strictly-secured table. See add_government_ids.sql
   // and add_tin_and_hired_date.sql.
-  const [governmentIds, setGovernmentIds] = useState<{ sss_number: string | null; philhealth_number: string | null; pagibig_number: string | null; tin_number: string | null; hired_date: string | null; employment_status: string | null } | null>(null);
+  const [governmentIds, setGovernmentIds] = useState<{ hired_date: string | null; employment_status: string | null } | null>(null);
   const [showGovIdsSection, setShowGovIdsSection] = useState(false);
-  const [visibleFields, setVisibleFields] = useState<{ sss: boolean; philhealth: boolean; pagibig: boolean; tin: boolean }>({
-    sss: false,
-    philhealth: false,
-    pagibig: false,
-    tin: false,
-  });
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [savedPhoneNumber, setSavedPhoneNumber] = useState('');
+  const [phoneSaving, setPhoneSaving] = useState(false);
+  const [phoneMessage, setPhoneMessage] = useState('');
 
   // History filter (month picker, e.g. "2026-07:H1") -- defaults to the
   // current cutoff period so employees land on "this cutoff" instead of
@@ -592,6 +572,9 @@ export default function EmployeeDashboard() {
       return;
     }
     setCurrentUserId(user.id);
+    const contactPhone = typeof user.user_metadata?.contact_phone === 'string' ? user.user_metadata.contact_phone : (user.phone || '');
+    setPhoneNumber(contactPhone);
+    setSavedPhoneNumber(contactPhone);
 
     // Use the Manila calendar date, not the browser's local/UTC date --
     // otherwise an employee whose device is set to a timezone behind
@@ -601,7 +584,7 @@ export default function EmployeeDashboard() {
     const year = new Date().getFullYear();
     const [profileRes, govIdRes, historyRes, leavesCountRes, disputesCountRes, payslipsCountRes, supportCountRes, leaveCreditsRes] = await Promise.all([
       supabase.from('profiles').select('full_name, employee_id, designation, role, avatar_url').eq('id', user.id).single(),
-      supabase.from('employee_government_ids').select('sss_number, philhealth_number, pagibig_number, tin_number, hired_date, employment_status').eq('user_id', user.id).maybeSingle(),
+      supabase.from('employee_government_ids').select('hired_date, employment_status').eq('user_id', user.id).maybeSingle(),
       supabase.from('attendance_logs').select('id, log_date, time_in, time_out, status').eq('user_id', user.id).order('log_date', { ascending: false }),
       supabase.from('leave_requests').select('id', { count: 'exact', head: true }).eq('user_id', user.id).eq('status', 'Pending'),
       supabase.from('attendance_disputes').select('id', { count: 'exact', head: true }).eq('user_id', user.id).eq('status', 'Pending'),
@@ -1448,38 +1431,44 @@ export default function EmployeeDashboard() {
     }
   };
 
-  // Masks a value except for its first 2 characters, e.g. "34" + dots
-  // for the rest -- shows just enough to help the employee recognize
-  // "yes, this is my number" without exposing the whole thing.
-  const maskValue = (value: string) => {
-    if (value.length <= 2) return value;
-    return value.slice(0, 2) + '•'.repeat(value.length - 2);
+  const savePhoneNumber = async () => {
+    const value = phoneNumber.trim();
+    if (value && (!/^\+?[0-9 ()-]+$/.test(value) || value.replace(/\D/g, '').length < 7 || value.replace(/\D/g, '').length > 15)) {
+      setPhoneMessage('Enter a valid phone number with 7?15 digits.');
+      return;
+    }
+    setPhoneSaving(true);
+    setPhoneMessage('');
+    try {
+      const { error } = await supabase.auth.updateUser({ data: { contact_phone: value } });
+      if (error) throw error;
+      setSavedPhoneNumber(value);
+      setPhoneNumber(value);
+      setPhoneMessage('Phone number saved.');
+    } catch {
+      setPhoneMessage('Could not save your phone number. Please try again.');
+    } finally {
+      setPhoneSaving(false);
+    }
   };
 
-  // Renders one masked/unmaskable government ID row, e.g. SSS Number.
-  const renderGovIdRow = (label: string, value: string | null, fieldKey: 'sss' | 'philhealth' | 'pagibig' | 'tin') => (
+  const renderPhoneNumber = () => (
     <div>
-      <p className="label-branded mb-1">{label}</p>
-      <div className="flex items-center justify-between gap-2">
-        <p className="font-medium text-slate-700 tabular-nums">
-          {value ? (visibleFields[fieldKey] ? value : maskValue(value)) : 'Not set'}
-        </p>
-        {value && (
-          <button
-            type="button"
-            onClick={() => setVisibleFields((v) => ({ ...v, [fieldKey]: !v[fieldKey] }))}
-            className="text-slate-400 hover:text-slate-600 flex-shrink-0 transition"
-            aria-label={visibleFields[fieldKey] ? `Hide ${label}` : `Show ${label}`}
-          >
-            {visibleFields[fieldKey] ? <EyeOffIcon /> : <EyeIcon />}
-          </button>
-        )}
-      </div>
+      <label className="block">
+        <span className="label-branded mb-1 block">Phone Number</span>
+        <input type="tel" autoComplete="tel" maxLength={25} value={phoneNumber}
+          onChange={(event) => { setPhoneNumber(event.target.value); setPhoneMessage(''); }}
+          disabled={initLoading || phoneSaving} placeholder="+966 5X XXX XXXX"
+          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-600 dark:bg-slate-800 dark:text-white" />
+      </label>
+      <button type="button" onClick={savePhoneNumber} disabled={initLoading || phoneSaving || phoneNumber.trim() === savedPhoneNumber}
+        className="mt-2 rounded-lg bg-green-700 px-3 py-2 text-xs font-bold text-white disabled:opacity-50">
+        {phoneSaving ? 'Saving?' : 'Save Phone Number'}
+      </button>
+      {phoneMessage && <p role="status" className="mt-1 text-xs text-slate-600 dark:text-slate-300">{phoneMessage}</p>}
     </div>
   );
 
-  // Hired Date isn't sensitive like a government ID number, so it's
-  // just shown plainly -- no masking/eye icon needed.
   const formatHiredDate = (dateStr: string) => {
     const [y, m, d] = dateStr.split('-').map(Number);
     return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
@@ -1734,10 +1723,7 @@ export default function EmployeeDashboard() {
       profile?.employee_id,
       profile?.designation,
       profile?.avatar_url,
-      governmentIds?.sss_number,
-      governmentIds?.philhealth_number,
-      governmentIds?.pagibig_number,
-      governmentIds?.tin_number,
+      savedPhoneNumber,
       governmentIds?.hired_date,
       governmentIds?.employment_status,
     ];
@@ -1748,7 +1734,7 @@ export default function EmployeeDashboard() {
       percent: Math.round((completed / fields.length) * 100),
       missing: fields.length - completed,
     };
-  }, [profile, governmentIds]);
+  }, [profile, governmentIds, savedPhoneNumber]);
 
   // --- Persistent Notification Inbox ---
   type EmployeeNotification = {
@@ -2196,7 +2182,7 @@ export default function EmployeeDashboard() {
         {/* Header */}
         <header className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_4px_18px_rgba(15,23,42,0.04)] dark:bg-[#292f2b] sm:p-4">
           <div className="min-w-0">
-            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#16a34a] lg:hidden">Hamdan Engineering</p>
+            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#16a34a] lg:hidden">Hamdan Studio</p>
             <h1 className="mt-0.5 truncate text-xl font-bold leading-tight sm:text-2xl">{profile?.full_name || 'Employee'}</h1>
             <p className="mt-1 truncate text-xs font-semibold uppercase tracking-wide text-slate-500">{profile?.designation || 'Employee'}</p>
           </div>
@@ -2307,10 +2293,7 @@ export default function EmployeeDashboard() {
               </button>
               {showGovIdsSection && (
                 <div className="mt-3 pt-3 border-t border-slate-100 space-y-3">
-                  {renderGovIdRow('SSS Number', governmentIds?.sss_number ?? null, 'sss')}
-                  {renderGovIdRow('PhilHealth Number', governmentIds?.philhealth_number ?? null, 'philhealth')}
-                  {renderGovIdRow('Pag-IBIG Number', governmentIds?.pagibig_number ?? null, 'pagibig')}
-                  {renderGovIdRow('TIN Number', governmentIds?.tin_number ?? null, 'tin')}
+                  {renderPhoneNumber()}
                   <div><p className="label-branded mb-1">Hired Date</p><p className="font-medium text-slate-700 text-sm">{governmentIds?.hired_date ? formatHiredDate(governmentIds.hired_date) : 'Not set'}</p></div>
                   <div>
                     <p className="label-branded mb-1">Employment Status</p>
@@ -2621,10 +2604,7 @@ export default function EmployeeDashboard() {
         details={<>
           <div><div className="mb-1.5 flex items-center justify-between gap-2"><p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Profile completeness</p><p className="text-xs font-extrabold text-slate-700">{profileCompleteness.percent}%</p></div><div className="h-2 overflow-hidden rounded-full bg-slate-200"><div className="h-full rounded-full bg-green-600" style={{ width: `${profileCompleteness.percent}%` }} /></div></div>
           <div><p className="label-branded mb-1">Employee ID</p><p className="text-sm font-medium text-slate-700">{profile?.employee_id || 'Not set'}</p></div>
-          {renderGovIdRow('SSS Number', governmentIds?.sss_number ?? null, 'sss')}
-          {renderGovIdRow('PhilHealth Number', governmentIds?.philhealth_number ?? null, 'philhealth')}
-          {renderGovIdRow('Pag-IBIG Number', governmentIds?.pagibig_number ?? null, 'pagibig')}
-          {renderGovIdRow('TIN Number', governmentIds?.tin_number ?? null, 'tin')}
+          {renderPhoneNumber()}
           <div><p className="label-branded mb-1">Hired Date</p><p className="text-sm font-medium text-slate-700">{governmentIds?.hired_date ? formatHiredDate(governmentIds.hired_date) : 'Not set'}</p></div>
           <div><p className="label-branded mb-1">Employment Status</p>{governmentIds?.employment_status ? <span className={governmentIds.employment_status === 'Regular' ? 'tag-present' : governmentIds.employment_status === 'Probationary' ? 'tag-late' : 'tag-excused'}>{governmentIds.employment_status}</span> : <p className="text-sm font-medium text-slate-700">Not set</p>}</div>
         </>}
