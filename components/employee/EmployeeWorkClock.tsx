@@ -1,19 +1,19 @@
 'use client';
-
 import { memo, useEffect, useState } from 'react';
 import { Clock3 } from 'lucide-react';
-
 type TodayLog = {
   time_out: string | null;
   status: string | null;
 } | null;
-
 function getManilaClock() {
   const now = new Date();
   return {
-    time: now.toLocaleTimeString('en-GB', {
+    time: now.toLocaleTimeString('en-US', {
       timeZone: 'Asia/Riyadh',
-      hour12: false,
+      hour: 'numeric',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true,
     }),
     date: now.toLocaleDateString('en-US', {
       timeZone: 'Asia/Riyadh',
@@ -24,24 +24,20 @@ function getManilaClock() {
     }),
   };
 }
-
 function EmployeeWorkClock({ todayLog }: { todayLog: TodayLog }) {
   const [clock, setClock] = useState(() => ({ time: '--:--:--', date: '' }));
-
   useEffect(() => {
     const updateClock = () => setClock(getManilaClock());
     updateClock();
     const timer = window.setInterval(updateClock, 1000);
     return () => window.clearInterval(timer);
   }, []);
-
   const isTodayLate = todayLog?.status?.toLowerCase() === 'late';
   const todayWorkStatus = !todayLog
     ? { label: 'No Time In', color: 'bg-red-100 text-red-700' }
     : isTodayLate
       ? { label: todayLog.time_out ? 'Completed · Late' : 'Working · Late', color: 'bg-orange-100 text-orange-700' }
       : { label: todayLog.time_out ? 'Completed' : 'Working', color: 'bg-green-100 text-green-700' };
-
   const workClockTone = !todayLog
     ? {
         panel: 'from-rose-500 to-red-700',
@@ -59,7 +55,6 @@ function EmployeeWorkClock({ todayLog }: { todayLog: TodayLog }) {
           border: 'border-emerald-200 dark:border-emerald-900/60',
           rail: 'from-emerald-400 via-green-500 to-teal-600',
         };
-
   return (
     <div className={`relative flex min-h-40 overflow-hidden rounded-3xl border bg-white shadow-[0_12px_30px_rgba(15,23,42,0.08)] dark:bg-[#292f2b] ${workClockTone.border}`}>
       <div className={`relative flex w-[34%] min-w-28 flex-col items-center justify-center overflow-hidden bg-gradient-to-br px-3 py-5 text-center text-white transition-colors duration-300 ${workClockTone.panel}`}>
@@ -75,7 +70,7 @@ function EmployeeWorkClock({ todayLog }: { todayLog: TodayLog }) {
       <div className="relative flex min-w-0 flex-1 flex-col justify-center px-4 py-5 text-left sm:px-5">
         <span className={`absolute right-0 top-0 h-full w-1 bg-gradient-to-b transition-colors duration-300 ${workClockTone.rail}`} aria-hidden="true" />
         <p className="text-[9px] font-extrabold uppercase tracking-[0.18em] text-slate-400">Jeddah time</p>
-        <p className="mt-1 font-mono text-[clamp(2rem,8vw,3rem)] font-black leading-none tabular-nums tracking-[-0.08em] text-slate-950 dark:text-white">{clock.time}</p>
+        <p className="mt-1 font-mono text-[clamp(1.6rem,7vw,2.6rem)] font-black leading-none tabular-nums tracking-[-0.06em] text-slate-950 dark:text-white">{clock.time}</p>
         <div className="mt-3 border-t border-dashed border-slate-200 pt-2 dark:border-slate-700">
           <p className="truncate text-[9px] font-bold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-300">{clock.date}</p>
         </div>
@@ -83,5 +78,4 @@ function EmployeeWorkClock({ todayLog }: { todayLog: TodayLog }) {
     </div>
   );
 }
-
 export default memo(EmployeeWorkClock);
