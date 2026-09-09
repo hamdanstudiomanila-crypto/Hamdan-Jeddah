@@ -1,4 +1,8 @@
 'use client';
+
+import { isScheduledWorkday, isWorkingDate, workDate, WORK_SCHEDULE_EFFECTIVE_DATE } from '@/lib/work-schedule';
+import { countChargeableLeaveDays } from '@/lib/leave-rules';
+import { attendanceTiming } from '@/lib/attendance-rules';
 import { applyPortalTheme } from '@/lib/portal-theme';
 import MobileBottomNav from '@/components/employee/MobileBottomNav';
 import EmployeeSummaryCard from '@/components/employee/EmployeeSummaryCard';
@@ -60,10 +64,10 @@ function MoonIcon() {
 // Fallback values used only if app_settings hasn't loaded yet or a row
 // is missing -- normal operation always uses the configurable values
 // fetched from the database (editable via Super Admin -> App Settings).
-const FALLBACK_LATE_CUTOFF_HOUR = 9;
-const FALLBACK_LATE_CUTOFF_MINUTE = 15;
+const FALLBACK_LATE_CUTOFF_HOUR = 8;
+const FALLBACK_LATE_CUTOFF_MINUTE = 0;
 const FALLBACK_LEAVE_CREDITS = 10;
-const FALLBACK_TIME_OUT_REMINDER_HOUR = 19;
+const FALLBACK_TIME_OUT_REMINDER_HOUR = 18;
 
 export default function EmployeeDashboard() {
   const { verify, verificationDialog } = useVerificationDialog();
@@ -84,6 +88,8 @@ export default function EmployeeDashboard() {
   const [seasonalSettings, setSeasonalSettings] = useState<AppSettingsValues>({ ...DEFAULT_APP_SETTINGS });
   const [dismissedSeasonalBanner, setDismissedSeasonalBanner] = useState<string | null>(null);
   const seasonalTheme = useMemo(() => resolveSeasonalTheme(seasonalSettings, 'employee'), [seasonalSettings]);
+  const workEndHour = Number(seasonalSettings.work_end_hour);
+  const workEndMinute = Number(seasonalSettings.work_end_minute);
   const seasonalPresentation = SEASONAL_THEME_PRESENTATION[seasonalTheme.variant];
 
   const fetchAppSettings = async () => {
@@ -128,7 +134,7 @@ export default function EmployeeDashboard() {
     return () => window.removeEventListener('storage', syncTheme);
   }, [applyTheme]);
 
-  // 7PM time-out reminder -- an in-page toast, not a real push
+  // 6PM time-out reminder -- an in-page toast, not a real push
   // notification, so it only appears while this tab is open. Uses a
   // ref for todayLog because the interval below is set up once on
   // mount and would otherwise always see the stale (null) value from
@@ -146,7 +152,7 @@ export default function EmployeeDashboard() {
   // Realtime event -- neither counts as a gesture. The fix: create ONE
   // AudioContext and "unlock" it on the very first click/tap/keypress
   // anywhere on the page (which will already have happened long before
-  // 7PM or an announcement update in normal use), then keep reusing
+  // 6PM or an announcement update in normal use), then keep reusing
   // that same already-running context for every sound after that.
   const audioContextRef = useRef<AudioContext | null>(null);
 
@@ -187,7 +193,7 @@ export default function EmployeeDashboard() {
   // Two-tone chime generated with the Web Audio API -- no audio file
   // needed. Browsers generally allow this once the person has already
   // interacted with the page at all (e.g. logging in, clicking
-  // anything), which will already be true by 7PM in normal use.
+  // anything), which will already be true by 6PM in normal use.
   const playNotificationSound = () => {
     if (appSettingsRef.current.notification_sound_enabled === false) return;
     try {
@@ -314,7 +320,7 @@ export default function EmployeeDashboard() {
 
   const fetchWeatherAdvisory = async () => {
     try {
-      const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila' }).format(new Date());
+      const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Riyadh' }).format(new Date());
       const { data, error } = await supabase
         .from('weather_advisories')
         .select('id, location_name, advisory_date, headline, message, severity, temperature_c, precipitation_probability, weather_code, commute_window, source_name, generated_at')
@@ -374,17 +380,17 @@ export default function EmployeeDashboard() {
   useEffect(() => {
     const checkTimeOutReminder = () => {
       const now = new Date();
-      // Check Philippine time specifically (not the device's local
+      // Check Jeddah time specifically (not the device's local
       // time) so the reminder is correct regardless of how the
       // employee's device clock/timezone is set.
-      const manilaHour = parseInt(
-        new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Manila', hour: '2-digit', hour12: false }).format(now),
+      const jeddahHour = parseInt(
+        new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Riyadh', hour: '2-digit', hour12: false }).format(now),
         10
       );
 
       if (
         appSettingsRef.current.timeout_reminder_enabled !== false &&
-        manilaHour >= timeOutReminderHourRef.current &&
+        jeddahHour >= timeOutReminderHourRef.current &&
         todayLogRef.current?.time_in &&
         !todayLogRef.current?.time_out &&
         !reminderDismissedRef.current
@@ -464,7 +470,7 @@ export default function EmployeeDashboard() {
           setAnnouncementUpdatedAt(
             newRow.updated_at
               ? new Date(newRow.updated_at).toLocaleString('en-US', {
-                  timeZone: 'Asia/Manila',
+                  timeZone: 'Asia/Riyadh',
                   month: 'short',
                   day: 'numeric',
                   year: 'numeric',
@@ -576,10 +582,10 @@ export default function EmployeeDashboard() {
     setPhoneNumber(contactPhone);
     setSavedPhoneNumber(contactPhone);
 
-    // Use the Manila calendar date, not the browser's local/UTC date --
+    // Use the Jeddah calendar date, not the browser's local/UTC date --
     // otherwise an employee whose device is set to a timezone behind
     // UTC could see the wrong "today" near midnight.
-    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila' }).format(new Date());
+    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Riyadh' }).format(new Date());
 
     const year = new Date().getFullYear();
     const [profileRes, govIdRes, historyRes, leavesCountRes, disputesCountRes, payslipsCountRes, supportCountRes, leaveCreditsRes] = await Promise.all([
@@ -652,7 +658,7 @@ export default function EmployeeDashboard() {
       setAnnouncementUpdatedAt(
         data?.updated_at
           ? new Date(data.updated_at).toLocaleString('en-US', {
-              timeZone: 'Asia/Manila',
+              timeZone: 'Asia/Riyadh',
               month: 'short',
               day: 'numeric',
               year: 'numeric',
@@ -695,15 +701,11 @@ export default function EmployeeDashboard() {
   };
 
   // Called when the employee clicks Time Out.
-  // If it's before 7PM Manila time, show a warning first.
+  // If it's before 6PM Jeddah time, show a warning first.
   const handleTimeOutClick = () => {
     if (!attendanceRecordingEnabled) { setMessage('Error: Attendance recording is temporarily unavailable.'); return; }
     const now = new Date();
-    const manilaHour = parseInt(
-      new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Manila', hour: '2-digit', hour12: false }).format(now),
-      10
-    );
-    if (manilaHour < timeOutReminderHour) {
+    if (isWorkingDate(workDate(now), companyHolidays.map(h => h.holiday_date)) && !isTimeOutComplete(now.toISOString())) {
       setShowEarlyTimeOutWarning(true);
     } else {
       handleTimeOut();
@@ -742,7 +744,7 @@ export default function EmployeeDashboard() {
     return 'tag-present';
   };
 
-  // --- Early time-out warning (before 7PM) ---
+  // --- Early time-out warning (before 6PM) ---
   const [showEarlyTimeOutWarning, setShowEarlyTimeOutWarning] = useState(false);
 
   // --- Employee Directory ---
@@ -1064,8 +1066,8 @@ export default function EmployeeDashboard() {
       setLeaveMsg({ type: 'error', text: 'Leave requests are temporarily disabled by the administrator.' });
       return;
     }
-    const currentManilaDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila' }).format(new Date());
-    const noticeDays = Math.floor((new Date(`${leaveForm.start_date}T00:00:00+08:00`).getTime() - new Date(`${currentManilaDate}T00:00:00+08:00`).getTime()) / 86_400_000);
+    const currentJeddahDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Riyadh' }).format(new Date());
+    const noticeDays = Math.floor((new Date(`${leaveForm.start_date}T00:00:00+03:00`).getTime() - new Date(`${currentJeddahDate}T00:00:00+03:00`).getTime()) / 86_400_000);
     const minimumNotice = Number(seasonalSettings.leave_request_min_notice_days || 0);
     if (noticeDays < minimumNotice) {
       setLeaveMsg({ type: 'error', text: `Leave requests require at least ${minimumNotice} day${minimumNotice === 1 ? '' : 's'} notice.` });
@@ -1108,7 +1110,7 @@ export default function EmployeeDashboard() {
     }
     const targetLeave = myLeaves.find((leave) => leave.id === leaveId);
     const leadHours = Number(seasonalSettings.leave_cancel_before_start_hours || 0);
-    if (targetLeave?.start_date && new Date(`${targetLeave.start_date}T00:00:00+08:00`).getTime() - Date.now() < leadHours * 3_600_000) {
+    if (targetLeave?.start_date && new Date(`${targetLeave.start_date}T00:00:00+03:00`).getTime() - Date.now() < leadHours * 3_600_000) {
       alert(`Leave requests can only be cancelled at least ${leadHours} hour${leadHours === 1 ? '' : 's'} before they start.`);
       return;
     }
@@ -1130,26 +1132,12 @@ export default function EmployeeDashboard() {
     [companyHolidays]
   );
 
-  // Count chargeable leave days: Monday-Friday, excluding company holidays.
-  const countLeaveDays = (start: string, end: string) => {
-    if (!start || !end || end < start) return 0;
-    let count = 0;
-    const [sy, sm, sd] = start.split('-').map(Number);
-    const [ey, em, ed] = end.split('-').map(Number);
-    const d = new Date(Date.UTC(sy, sm - 1, sd));
-    const endDate = new Date(Date.UTC(ey, em - 1, ed));
-    while (d <= endDate) {
-      const day = d.getUTCDay();
-      const dateKey = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
-      if (day !== 0 && day !== 6 && !companyHolidayDateSet.has(dateKey)) count++;
-      d.setUTCDate(d.getUTCDate() + 1);
-    }
-    return count;
-  };
+  // The leave estimator uses the same dated workweek as database settlement.
+  const countLeaveDays = (start: string, end: string) => countChargeableLeaveDays(start, end, companyHolidayDateSet);
 
   const countLeaveHolidays = (start: string, end: string) => {
     if (!start || !end || end < start) return 0;
-    return companyHolidays.filter((holiday) => holiday.holiday_date >= start && holiday.holiday_date <= end).length;
+    return companyHolidays.filter((holiday) => holiday.holiday_date >= start && holiday.holiday_date <= end && isScheduledWorkday(holiday.holiday_date)).length;
   };
 
   // --- Attendance Disputes ---
@@ -1246,7 +1234,7 @@ export default function EmployeeDashboard() {
   const disputeClaimed = (d: any) => ((d.dispute_type || 'TimeIn') === 'TimeOut' ? d.claimed_time_out : d.claimed_time_in);
   const disputeFieldLabel = (d: any) => ((d.dispute_type || 'TimeIn') === 'TimeOut' ? 'Time-Out' : 'Time-In');
   const formatDisputeTimePh = (iso: string) =>
-    new Date(iso).toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit' });
+    new Date(iso).toLocaleTimeString('en-US', { timeZone: 'Asia/Riyadh', hour: '2-digit', minute: '2-digit' });
 
   // Whether the currently-open dispute modal was launched from a
   // specific row (Late tag / missed time-out link -- type is fixed) or
@@ -1300,23 +1288,14 @@ export default function EmployeeDashboard() {
   // cutoff, configurable time-out cutoff -- Super Admin -> App
   // Settings) -- used here to decide whether each option on the
   // "choice" screen is actually worth disputing.
-  const isTimeInOnTime = (timeInIso: string) => {
-    const parts = new Intl.DateTimeFormat('en-CA', {
-      timeZone: 'Asia/Manila',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-    }).formatToParts(new Date(timeInIso)).reduce((acc: any, p) => { acc[p.type] = p.value; return acc; }, {});
-    const minutesSinceMidnight = parseInt(parts.hour, 10) * 60 + parseInt(parts.minute, 10);
-    return minutesSinceMidnight < lateCutoffHour * 60 + lateCutoffMinute;
-  };
+  const isTimeInOnTime = (timeInIso: string) => attendanceTiming(timeInIso, lateCutoffHour, lateCutoffMinute).status === 'Present';
 
   const isTimeOutComplete = (timeOutIso: string) => {
-    const manilaHour = parseInt(
-      new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Manila', hour: '2-digit', hour12: false }).format(new Date(timeOutIso)),
-      10
-    );
-    return manilaHour >= timeOutReminderHour;
+    const date = workDate(new Date(timeOutIso));
+    if (!isWorkingDate(date, companyHolidays.map(h => h.holiday_date))) return true;
+    const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Riyadh', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date(timeOutIso));
+    const minutes = Number(parts.find(p => p.type === 'hour')?.value) * 60 + Number(parts.find(p => p.type === 'minute')?.value);
+    return minutes >= (date < WORK_SCHEDULE_EFFECTIVE_DATE ? 19 * 60 : workEndHour * 60 + workEndMinute);
   };
 
   // Whether each dispute type is actually worth offering on the "choice"
@@ -1343,7 +1322,7 @@ export default function EmployeeDashboard() {
         : { eligible: true, reason: '' };
 
     return { timeIn, timeOut };
-  }, [disputeForm.date, history, lateCutoffHour, lateCutoffMinute, timeOutReminderHour]);
+  }, [disputeForm.date, history, lateCutoffHour, lateCutoffMinute, workEndHour, workEndMinute, companyHolidays]);
 
   // Validates the form and, if everything checks out, moves to the
   // highlighted review/confirm screen instead of submitting right away.
@@ -1353,7 +1332,7 @@ export default function EmployeeDashboard() {
       return;
     }
     const disputeWindowDays = Number(seasonalSettings.attendance_dispute_window_days || 7);
-    if (disputeForm.date && Date.now() - new Date(`${disputeForm.date}T23:59:59+08:00`).getTime() > disputeWindowDays * 86_400_000) {
+    if (disputeForm.date && Date.now() - new Date(`${disputeForm.date}T23:59:59+03:00`).getTime() > disputeWindowDays * 86_400_000) {
       setDisputeMsg({ type: 'error', text: `Attendance disputes must be filed within ${disputeWindowDays} day${disputeWindowDays === 1 ? '' : 's'} of the record.` });
       return;
     }
@@ -1386,8 +1365,8 @@ export default function EmployeeDashboard() {
 
       // disputeForm.timeLocal is a PH wall-clock time like "08:05";
       // combine with the date and convert to a real UTC timestamp,
-      // same +08:00 fixed-offset approach used elsewhere in the app.
-      const claimedTimeISO = new Date(`${disputeForm.date}T${disputeForm.timeLocal}:00+08:00`).toISOString();
+      // same +03:00 fixed-offset approach used elsewhere in the app.
+      const claimedTimeISO = new Date(`${disputeForm.date}T${disputeForm.timeLocal}:00+03:00`).toISOString();
 
       // Snapshot what time_in/time_out currently is (if a log already
       // exists for this day), so we can show a clear "before -> after"
@@ -1497,16 +1476,16 @@ export default function EmployeeDashboard() {
     return `${ym}:${half}`;
   }, []);
 
-  // Today's date in Manila -- used to decide whether a "no time out"
+  // Today's date in Jeddah -- used to decide whether a "no time out"
   // row is eligible for a missed-time-out dispute (only past days;
   // today's row already has its own Time Out button/reminder).
-  const todayManila = useMemo(
-    () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila' }).format(new Date()),
+  const todayJeddah = useMemo(
+    () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Riyadh' }).format(new Date()),
     []
   );
 
   const upcomingApprovedLeaves = myLeaves
-    .filter((leave) => leave.status === 'Approved' && leave.end_date >= todayManila)
+    .filter((leave) => leave.status === 'Approved' && leave.end_date >= todayJeddah)
     .sort((a, b) => a.start_date.localeCompare(b.start_date))
     .slice(0, 3);
 
@@ -1516,7 +1495,7 @@ export default function EmployeeDashboard() {
   // it's just skipped over.
   const attendanceStreak = useMemo(() => {
     const sorted = [...history]
-      .filter((l) => l.log_date && l.log_date <= todayManila)
+      .filter((l) => l.log_date && l.log_date <= todayJeddah)
       .sort((a, b) => (a.log_date < b.log_date ? 1 : -1));
     let streak = 0;
     for (const log of sorted) {
@@ -1526,7 +1505,7 @@ export default function EmployeeDashboard() {
       streak += 1;
     }
     return streak;
-  }, [history, todayManila]);
+  }, [history, todayJeddah]);
 
   const streakMessage =
     attendanceStreak === 0 ? 'Start your streak today!' :
@@ -1538,13 +1517,13 @@ export default function EmployeeDashboard() {
   // nearest-first, for the Company Calendar modal.
   const { upcomingHolidays, pastHolidays } = useMemo(() => {
     const upcoming = companyHolidays
-      .filter((h) => h.holiday_date >= todayManila)
+      .filter((h) => h.holiday_date >= todayJeddah)
       .sort((a, b) => (a.holiday_date < b.holiday_date ? -1 : 1));
     const past = companyHolidays
-      .filter((h) => h.holiday_date < todayManila)
+      .filter((h) => h.holiday_date < todayJeddah)
       .sort((a, b) => (a.holiday_date < b.holiday_date ? 1 : -1));
     return { upcomingHolidays: upcoming, pastHolidays: past };
-  }, [companyHolidays, todayManila]);
+  }, [companyHolidays, todayJeddah]);
 
   const formatHolidayDate = (dateStr: string) => {
     const [y, m, d] = dateStr.split('-').map(Number);
@@ -1553,7 +1532,7 @@ export default function EmployeeDashboard() {
 
   const daysUntilHoliday = (dateStr: string) => {
     const [y, m, d] = dateStr.split('-').map(Number);
-    const [ty, tm, td] = todayManila.split('-').map(Number);
+    const [ty, tm, td] = todayJeddah.split('-').map(Number);
     return Math.round((Date.UTC(y, m - 1, d) - Date.UTC(ty, tm - 1, td)) / 86400000);
   };
 
@@ -1566,19 +1545,7 @@ export default function EmployeeDashboard() {
   // late cutoff (Super Admin -> App Settings) -- same threshold
   // app/api/time-in/route.ts uses to decide Present vs Late, since we
   // don't store an exact minutes-late value anywhere.
-  const getMinutesLate = (timeInIso: string) => {
-    const parts = new Intl.DateTimeFormat('en-CA', {
-      timeZone: 'Asia/Manila',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-    })
-      .formatToParts(new Date(timeInIso))
-      .reduce((acc: any, p) => { acc[p.type] = p.value; return acc; }, {});
-    const minutesSinceMidnight = parseInt(parts.hour, 10) * 60 + parseInt(parts.minute, 10);
-    const cutoffMinutes = lateCutoffHour * 60 + lateCutoffMinute;
-    return Math.max(0, minutesSinceMidnight - cutoffMinutes);
-  };
+  const getMinutesLate = (timeInIso: string) => attendanceTiming(timeInIso, lateCutoffHour, lateCutoffMinute).minutesLate;
 
   const formatLateDuration = (mins: number) => {
     if (mins <= 0) return '0 min';
@@ -1857,9 +1824,9 @@ export default function EmployeeDashboard() {
   };
 
   const expectedTimeOutLabel = (() => {
-    const period = timeOutReminderHour >= 12 ? 'PM' : 'AM';
-    const hour = timeOutReminderHour % 12 || 12;
-    return `${hour}:00 ${period}`;
+    const period = workEndHour >= 12 ? 'PM' : 'AM';
+    const hour = workEndHour % 12 || 12;
+    return `${hour}:${String(workEndMinute).padStart(2, '0')} ${period}`;
   })();
 
   // --- Export Attendance History ---
@@ -1876,8 +1843,8 @@ export default function EmployeeDashboard() {
     const headers = ['Date', 'Day', 'Status', 'Time In', 'Time Out'];
     const rows = filteredHistory.map((log) => {
       const weekday = new Date(log.log_date).toLocaleDateString('en-US', { weekday: 'long' });
-      const timeIn = log.time_in ? new Date(log.time_in).toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit' }) : '';
-      const timeOut = log.time_out ? new Date(log.time_out).toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit' }) : '';
+      const timeIn = log.time_in ? new Date(log.time_in).toLocaleTimeString('en-US', { timeZone: 'Asia/Riyadh', hour: '2-digit', minute: '2-digit' }) : '';
+      const timeOut = log.time_out ? new Date(log.time_out).toLocaleTimeString('en-US', { timeZone: 'Asia/Riyadh', hour: '2-digit', minute: '2-digit' }) : '';
       return [log.log_date, weekday, log.status ?? '', timeIn, timeOut];
     });
     const csv = [headers, ...rows].map((r) => r.map(escapeCsv).join(',')).join('\r\n');
@@ -1901,8 +1868,8 @@ export default function EmployeeDashboard() {
     }
     const rowsHtml = filteredHistory.map((log) => {
       const weekday = new Date(log.log_date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-      const timeIn = log.time_in ? new Date(log.time_in).toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit' }) : '--:--';
-      const timeOut = log.time_out ? new Date(log.time_out).toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit' }) : '--:--';
+      const timeIn = log.time_in ? new Date(log.time_in).toLocaleTimeString('en-US', { timeZone: 'Asia/Riyadh', hour: '2-digit', minute: '2-digit' }) : '--:--';
+      const timeOut = log.time_out ? new Date(log.time_out).toLocaleTimeString('en-US', { timeZone: 'Asia/Riyadh', hour: '2-digit', minute: '2-digit' }) : '--:--';
       return `<tr><td>${weekday}</td><td>${log.log_date}</td><td><span class="tag ${(log.status ?? '').toLowerCase()}">${log.status ?? ''}</span></td><td>${timeIn}</td><td>${timeOut}</td></tr>`;
     }).join('');
 
@@ -1928,7 +1895,7 @@ export default function EmployeeDashboard() {
         </head>
         <body>
           <h1>${profile?.full_name || 'Employee'} -- Attendance History</h1>
-          <p class="sub">${profile?.employee_id ? `ID: ${profile.employee_id} · ` : ''}${monthFilter ? formatMonthLabel(monthFilter) : 'All records'} · Generated ${new Date().toLocaleDateString('en-US', { timeZone: 'Asia/Manila', month: 'long', day: 'numeric', year: 'numeric' })}</p>
+          <p class="sub">${profile?.employee_id ? `ID: ${profile.employee_id} · ` : ''}${monthFilter ? formatMonthLabel(monthFilter) : 'All records'} · Generated ${new Date().toLocaleDateString('en-US', { timeZone: 'Asia/Riyadh', month: 'long', day: 'numeric', year: 'numeric' })}</p>
           <table>
             <thead><tr><th>Day</th><th>Date</th><th>Status</th><th>Time In</th><th>Time Out</th></tr></thead>
             <tbody>${rowsHtml || '<tr><td colspan="5">No records.</td></tr>'}</tbody>
@@ -2312,7 +2279,7 @@ export default function EmployeeDashboard() {
             {/* Clock + Time buttons */}
             {!attendanceRecordingEnabled ? <div role="status" className="rounded-2xl border border-red-200 bg-red-50 p-3 text-xs font-bold text-red-800 dark:border-red-900 dark:bg-red-950/30 dark:!text-white">Attendance recording is temporarily unavailable.</div> : null}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <EmployeeWorkClock todayLog={todayLog} />
+              <EmployeeWorkClock todayLog={todayLog} holidays={companyHolidays.map(h => h.holiday_date)} startHour={Number(seasonalSettings.work_start_hour)} startMinute={Number(seasonalSettings.work_start_minute)} endHour={workEndHour} endMinute={workEndMinute} />
               <div className="flex flex-col justify-center gap-2 sm:min-h-40">
                 {!todayLog ? (
                   <button onClick={handleTimeIn} disabled={!attendanceRecordingEnabled || loading || initLoading || checkingNetwork || officeNetworkAllowed === false} className="btn-primary !py-3">
@@ -2328,8 +2295,8 @@ export default function EmployeeDashboard() {
                 <div className="flex min-h-6 flex-col justify-center">
                 {todayLog?.time_in && (
                   <p className="text-center text-slate-400 text-xs">
-                    In: {new Date(todayLog.time_in).toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                    {todayLog.time_out && <> · Out: {new Date(todayLog.time_out).toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit', second: '2-digit' })}</>}
+                    In: {new Date(todayLog.time_in).toLocaleTimeString('en-US', { timeZone: 'Asia/Riyadh', hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                    {todayLog.time_out && <> · Out: {new Date(todayLog.time_out).toLocaleTimeString('en-US', { timeZone: 'Asia/Riyadh', hour: '2-digit', minute: '2-digit', second: '2-digit' })}</>}
                   </p>
                 )}
                 {!checkingNetwork && officeNetworkAllowed === false && !(todayLog?.time_out) && (
@@ -2503,8 +2470,8 @@ export default function EmployeeDashboard() {
                         <span className={`${statusTagClass(log.status)} inline-flex w-[76px] items-center justify-center justify-self-center whitespace-nowrap`}>{log.status}</span>
                           <div className="min-w-0 text-right">
                             <div className="whitespace-nowrap font-semibold text-slate-700 text-xs">
-                              {log.time_in ? new Date(log.time_in).toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit' }) : '--:--'}
-                              {log.time_out && <> – {new Date(log.time_out).toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit' })}</>}
+                              {log.time_in ? new Date(log.time_in).toLocaleTimeString('en-US', { timeZone: 'Asia/Riyadh', hour: '2-digit', minute: '2-digit' }) : '--:--'}
+                              {log.time_out && <> – {new Date(log.time_out).toLocaleTimeString('en-US', { timeZone: 'Asia/Riyadh', hour: '2-digit', minute: '2-digit' })}</>}
                             </div>
                             {/* Single "Dispute" button -- lets the employee pick Time In or
                                 Time Out on the choice screen, instead of two separate,
@@ -2740,7 +2707,7 @@ export default function EmployeeDashboard() {
       {/* Company Calendar Modal */}
       {calendarModalOpen && <CompanyCalendarModal open={calendarModalOpen} onClose={() => setCalendarModalOpen(false)} loading={holidaysLoading} holidays={companyHolidays} upcoming={upcomingHolidays} past={pastHolidays} formatDate={formatHolidayDate} daysUntil={daysUntilHoliday} />}
 
-      {leaveModalOpen && <LeaveRequestModal open={leaveModalOpen} onClose={() => setLeaveModalOpen(false)} onBack={() => { setLeaveModalOpen(false); setLeaveChoiceModalOpen(true); }} countLeaveDays={countLeaveDays} countLeaveHolidays={countLeaveHolidays} fallbackLeaveCredits={fallbackLeaveCredits} isRegular={isRegular} leaveCredits={leaveCredits} leaveForm={leaveForm} leaveMsg={leaveMsg} leaveSaving={leaveSaving} remainingCredits={remainingCredits} setLeaveForm={setLeaveForm} submitLeave={submitLeave} todayManila={todayManila} upcomingApprovedLeaves={upcomingApprovedLeaves} />}
+      {leaveModalOpen && <LeaveRequestModal open={leaveModalOpen} onClose={() => setLeaveModalOpen(false)} onBack={() => { setLeaveModalOpen(false); setLeaveChoiceModalOpen(true); }} countLeaveDays={countLeaveDays} countLeaveHolidays={countLeaveHolidays} fallbackLeaveCredits={fallbackLeaveCredits} isRegular={isRegular} leaveCredits={leaveCredits} leaveForm={leaveForm} leaveMsg={leaveMsg} leaveSaving={leaveSaving} remainingCredits={remainingCredits} setLeaveForm={setLeaveForm} submitLeave={submitLeave} todayJeddah={todayJeddah} upcomingApprovedLeaves={upcomingApprovedLeaves} />}
 
       {/* Leave Result Toast */}
       {leaveResultToast && (

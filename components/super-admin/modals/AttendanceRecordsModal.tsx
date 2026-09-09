@@ -4,11 +4,11 @@ import type { Dispatch, SetStateAction } from 'react';
 import ModalShell from '@/components/shared/ModalShell';
 
 type AttendanceLog = { id: string; log_date?: string | null; time_in?: string | null; time_out?: string | null; status: string; profiles?: { full_name?: string | null } | null };
-type Props = { open: boolean; onClose: () => void; pageSize: number; attendanceDateFilter: string; attendanceLoading: boolean; attendancePage: number; attendanceSearch: string; attendanceTotalPages: number; filteredAttendanceLogs: AttendanceLog[]; handleAttendanceDateChange: (value: string) => void; handleAttendanceSearchChange: (value: string) => void; paginatedAttendanceLogs: AttendanceLog[]; setAttendancePage: Dispatch<SetStateAction<number>>; startEditLog: (log: AttendanceLog) => void; statusTagClass: (status: string) => string; todayManila: string };
+type Props = { open: boolean; onClose: () => void; pageSize: number; attendanceDateFilter: string; attendanceLoading: boolean; attendancePage: number; attendanceSearch: string; attendanceTotalPages: number; filteredAttendanceLogs: AttendanceLog[]; handleAttendanceDateChange: (value: string) => void; handleAttendanceSearchChange: (value: string) => void; paginatedAttendanceLogs: AttendanceLog[]; setAttendancePage: Dispatch<SetStateAction<number>>; startEditLog: (log: AttendanceLog) => void; statusTagClass: (status: string) => string; todayJeddah: string };
 
-export default function AttendanceRecordsModal({ open, onClose, pageSize, attendanceDateFilter, attendanceLoading, attendancePage, attendanceSearch, attendanceTotalPages, filteredAttendanceLogs, handleAttendanceDateChange, handleAttendanceSearchChange, paginatedAttendanceLogs, setAttendancePage, startEditLog, statusTagClass, todayManila }: Props) {
+export default function AttendanceRecordsModal({ open, onClose, pageSize, attendanceDateFilter, attendanceLoading, attendancePage, attendanceSearch, attendanceTotalPages, filteredAttendanceLogs, handleAttendanceDateChange, handleAttendanceSearchChange, paginatedAttendanceLogs, setAttendancePage, startEditLog, statusTagClass, todayJeddah }: Props) {
   return (
-    <ModalShell open={open} onClose={onClose} title="Attendance Records" description={attendanceDateFilter === todayManila ? "Today's records" : attendanceDateFilter ? `Records for ${attendanceDateFilter}` : 'All records'} size="sm">
+    <ModalShell open={open} onClose={onClose} title="Attendance Records" description={attendanceDateFilter === todayJeddah ? "Today's records" : attendanceDateFilter ? `Records for ${attendanceDateFilter}` : 'All records'} size="sm">
             <div className="flex flex-wrap gap-2 mb-3 flex-shrink-0">
               <input
                 type="text"
@@ -24,9 +24,9 @@ export default function AttendanceRecordsModal({ open, onClose, pageSize, attend
                 className="input-field !py-1.5 !text-xs !min-h-0 w-auto"
               />
               <div className="flex gap-3 w-full">
-                {attendanceDateFilter !== todayManila && (
+                {attendanceDateFilter !== todayJeddah && (
                   <button
-                    onClick={() => handleAttendanceDateChange(todayManila)}
+                    onClick={() => handleAttendanceDateChange(todayJeddah)}
                     className="text-blue-600 font-bold text-xs whitespace-nowrap"
                   >
                     Today
@@ -73,16 +73,16 @@ export default function AttendanceRecordsModal({ open, onClose, pageSize, attend
                     <div className="flex items-center justify-between gap-2 mt-1.5">
                       <span className="text-slate-400 text-xs">
                         {log.log_date
-                          ? new Date(log.log_date).toLocaleDateString('en-US', { timeZone: 'Asia/Manila', month: 'short', day: 'numeric', year: 'numeric' })
+                          ? new Date(log.log_date).toLocaleDateString('en-US', { timeZone: 'Asia/Riyadh', month: 'short', day: 'numeric', year: 'numeric' })
                           : 'N/A'}
                       </span>
                       <span className="text-slate-600 text-xs">
                         {log.time_in
-                          ? new Date(log.time_in).toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit' })
+                          ? new Date(log.time_in).toLocaleTimeString('en-US', { timeZone: 'Asia/Riyadh', hour: '2-digit', minute: '2-digit' })
                           : 'N/A'}
                         {' – '}
                         {log.time_out
-                          ? new Date(log.time_out).toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit' })
+                          ? new Date(log.time_out).toLocaleTimeString('en-US', { timeZone: 'Asia/Riyadh', hour: '2-digit', minute: '2-digit' })
                           : '—'}
                       </span>
                     </div>

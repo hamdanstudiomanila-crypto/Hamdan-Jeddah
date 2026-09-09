@@ -41,7 +41,7 @@ export function validateClassification(v: unknown): Classification {
   return { ...(v.period === 'custom' ? { date_start: v.date_start as string, date_end: v.date_end as string } : {}), intent, metric: v.metric as string, period: v.period as Classification['period'], target_scope: v.target_scope as Classification['target_scope'], target_name: v.target_name, language: v.language as 'tl' | 'en', ...(typeof v.resolved_question === 'string' ? { resolved_question: v.resolved_question } : {}) };
 }
 export function periodDates(period: string, now = new Date()) {
-  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Riyadh', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
   const y = Number(today.slice(0, 4)); const m = Number(today.slice(5, 7));
   if (period === 'previous_month') {
     const start = new Date(Date.UTC(y, m - 2, 1)).toISOString().slice(0, 10);

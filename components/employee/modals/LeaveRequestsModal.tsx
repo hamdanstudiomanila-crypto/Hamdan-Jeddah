@@ -49,9 +49,9 @@ export default function LeaveRequestsModal({ open, onClose, onBackToChoice, canc
 
                   <div className="text-slate-400 text-[10px] pt-1">
                     {selectedMyLeaveDetail.reviewed_at && (
-                      <p>Resolved: {new Date(selectedMyLeaveDetail.reviewed_at).toLocaleString('en-US', { timeZone: 'Asia/Manila', month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+                      <p>Resolved: {new Date(selectedMyLeaveDetail.reviewed_at).toLocaleString('en-US', { timeZone: 'Asia/Riyadh', month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
                     )}
-                    <p>Filed: {new Date(selectedMyLeaveDetail.created_at).toLocaleString('en-US', { timeZone: 'Asia/Manila', month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+                    <p>Filed: {new Date(selectedMyLeaveDetail.created_at).toLocaleString('en-US', { timeZone: 'Asia/Riyadh', month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
                   </div>
 
                   {selectedMyLeaveDetail.status === 'Pending' && (

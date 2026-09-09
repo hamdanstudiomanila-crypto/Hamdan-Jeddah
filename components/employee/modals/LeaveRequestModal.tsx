@@ -6,9 +6,9 @@ import ModalShell from '@/components/shared/ModalShell';
 
 type LeaveForm = { leave_type: string; start_date: string; end_date: string; reason: string };
 type Leave = { id: string; leave_type: string; start_date: string; end_date: string };
-type Props = { open: boolean; onClose: () => void; onBack: () => void; countLeaveDays: (start: string, end: string) => number; countLeaveHolidays: (start: string, end: string) => number; fallbackLeaveCredits: number; isRegular: boolean; leaveCredits: { total_credits: number; used_credits: number } | null; leaveForm: LeaveForm; leaveMsg: { type: 'success' | 'error'; text: string } | null; leaveSaving: boolean; remainingCredits: number; setLeaveForm: Dispatch<SetStateAction<LeaveForm>>; submitLeave: () => void | Promise<void>; todayManila: string; upcomingApprovedLeaves: Leave[] };
+type Props = { open: boolean; onClose: () => void; onBack: () => void; countLeaveDays: (start: string, end: string) => number; countLeaveHolidays: (start: string, end: string) => number; fallbackLeaveCredits: number; isRegular: boolean; leaveCredits: { total_credits: number; used_credits: number } | null; leaveForm: LeaveForm; leaveMsg: { type: 'success' | 'error'; text: string } | null; leaveSaving: boolean; remainingCredits: number; setLeaveForm: Dispatch<SetStateAction<LeaveForm>>; submitLeave: () => void | Promise<void>; todayJeddah: string; upcomingApprovedLeaves: Leave[] };
 
-export default function LeaveRequestModal({ open, onClose, onBack, countLeaveDays, countLeaveHolidays, fallbackLeaveCredits, isRegular, leaveCredits, leaveForm, leaveMsg, leaveSaving, remainingCredits, setLeaveForm, submitLeave, todayManila, upcomingApprovedLeaves }: Props) {
+export default function LeaveRequestModal({ open, onClose, onBack, countLeaveDays, countLeaveHolidays, fallbackLeaveCredits, isRegular, leaveCredits, leaveForm, leaveMsg, leaveSaving, remainingCredits, setLeaveForm, submitLeave, todayJeddah, upcomingApprovedLeaves }: Props) {
   return (
     <ModalShell open={open} onClose={onClose} title="File a Leave Request" size="sm" closeDisabled={leaveSaving}>
             {/* Credits badge for Regular employees */}
@@ -99,7 +99,7 @@ export default function LeaveRequestModal({ open, onClose, onBack, countLeaveDay
                     Estimated balance after approval: {remainingCredits - countLeaveDays(leaveForm.start_date, leaveForm.end_date)} credit{Math.abs(remainingCredits - countLeaveDays(leaveForm.start_date, leaveForm.end_date)) === 1 ? '' : 's'}
                   </p>
                 )}
-                {leaveForm.start_date < todayManila && (
+                {leaveForm.start_date < todayJeddah && (
                   <p className="text-blue-600 text-[10px] font-bold mt-1">Filing for a past date</p>
                 )}
                 {isRegular && remainingCredits < countLeaveDays(leaveForm.start_date, leaveForm.end_date) && (

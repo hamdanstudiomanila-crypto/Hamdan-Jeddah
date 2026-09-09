@@ -1,4 +1,6 @@
 'use client';
+
+import { isWorkingDate } from '@/lib/work-schedule';
 import { applyPortalTheme } from '@/lib/portal-theme';
 import HRDesktopSidebar from '@/components/hr/HRDesktopSidebar';
 import HRMobileBottomNav from '@/components/hr/HRMobileBottomNav';
@@ -14,7 +16,7 @@ import { useVerificationDialog } from '@/components/shared/useVerificationDialog
 import { APP_SETTING_DEFINITIONS, DEFAULT_APP_SETTINGS, normalizeAppSettings, type AppSettingsValues } from '@/lib/app-settings';
 import { resolveSeasonalTheme, SEASONAL_THEME_PRESENTATION } from '@/lib/seasonal-theme';
 import { countChargeableLeaveDays } from '@/lib/leave-rules';
-import { computeAttendanceStatus } from '@/lib/attendance-rules';
+import { attendanceTiming } from '@/lib/attendance-rules';
 import { errorMessage, type AttendanceDispute, type LeaveRequest } from '@/lib/types/hr';
 import SeasonalDecor from '@/components/seasonal/SeasonalDecor';
 
@@ -58,8 +60,8 @@ type Profile = {
 // Must match app/employee/page.tsx and app/api/time-in/route.ts.
 // Fallback values only -- normal operation uses the configurable values
 // fetched from app_settings (editable via Super Admin -> App Settings).
-const FALLBACK_LATE_CUTOFF_HOUR = 9;
-const FALLBACK_LATE_CUTOFF_MINUTE = 15;
+const FALLBACK_LATE_CUTOFF_HOUR = 8;
+const FALLBACK_LATE_CUTOFF_MINUTE = 0;
 
 export default function HRDashboard() {
   const router = useRouter();
@@ -69,11 +71,11 @@ export default function HRDashboard() {
   const [loadingData, setLoadingData] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Filter States — defaults to "today" (Philippine time) so HR sees
+  // Filter States — defaults to "today" (Jeddah time) so HR sees
   // today's attendance by default instead of the entire history.
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDate, setSelectedDate] = useState(() =>
-    new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila' }).format(new Date())
+    new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Riyadh' }).format(new Date())
   );
   // Cutoff period filter (1-15 / 16-end of month) -- when set, this takes over
   // from selectedDate for payroll-period review instead of a single day.
@@ -82,7 +84,7 @@ export default function HRDashboard() {
   // Which modal is open: null | 'choice' | 'edit' | 'payslips'
   const [modalMode, setModalMode] = useState<null | 'choice' | 'edit' | 'payslips'>(null);
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
-  const [editing, setEditing] = useState({ id: null as string | null, full_name: '', employee_id: '', designation: '', employee_email: '', sss_number: '', philhealth_number: '', pagibig_number: '', tin_number: '', hired_date: '', employment_status: '' });
+  const [editing, setEditing] = useState({ id: null as string | null, full_name: '', employee_id: '', designation: '', employee_email: '', hired_date: '', employment_status: '' });
   const [saveLoading, setSaveLoading] = useState(false);
 
   // Avatar upload (HR uploads directly on behalf of the employee) --
@@ -197,7 +199,7 @@ export default function HRDashboard() {
   const [exportCutoff, setExportCutoff] = useState('');
   const [exportEmployeeId, setExportEmployeeId] = useState('');
   const [rawExportMonth, setRawExportMonth] = useState(() =>
-    new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila', year: 'numeric', month: '2-digit' })
+    new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Riyadh', year: 'numeric', month: '2-digit' })
       .format(new Date())
       .slice(0, 7)
   );
@@ -255,7 +257,7 @@ export default function HRDashboard() {
     reportWindow.opener = null;
 
     const generatedAt = new Date().toLocaleString('en-US', {
-      timeZone: 'Asia/Manila',
+      timeZone: 'Asia/Riyadh',
       month: 'long',
       day: 'numeric',
       year: 'numeric',
@@ -285,7 +287,7 @@ export default function HRDashboard() {
         <div class="header">
           <div class="brand">Hamdan Studio</div>
           <h1>${escapeHtml(title)}</h1>
-          <div class="meta">Period: ${escapeHtml(periodLabel)}<br/>Generated: ${escapeHtml(generatedAt)} (Philippine time)<br/>Records: ${rows.length}</div>
+          <div class="meta">Period: ${escapeHtml(periodLabel)}<br/>Generated: ${escapeHtml(generatedAt)} (Jeddah time)<br/>Records: ${rows.length}</div>
         </div>
         <table><thead><tr>${headers.map((h) => `<th>${escapeHtml(h)}</th>`).join('')}</tr></thead>
         <tbody>${rows.map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(cell)}</td>`).join('')}</tr>`).join('')}</tbody></table>
@@ -364,7 +366,7 @@ export default function HRDashboard() {
   const getEmployeeMasterListRows = async () => {
     const { data: govData, error: govError } = await supabase
       .from('employee_government_ids')
-      .select('user_id, sss_number, philhealth_number, pagibig_number, tin_number, hired_date, employment_status');
+      .select('user_id, hired_date, employment_status');
     if (govError) throw govError;
 
     const govMap = new Map((govData || []).map((g: any) => [g.user_id, g]));
@@ -373,7 +375,7 @@ export default function HRDashboard() {
       .sort((a, b) => (a.full_name ?? '').localeCompare(b.full_name ?? ''))
       .map((p) => {
         const g = govMap.get(p.id) as any;
-        return [p.employee_id || '-', p.full_name || 'Unknown', p.designation || '-', p.employee_email || '-', g?.employment_status || '-', g?.hired_date || '-', g?.sss_number || '-', g?.philhealth_number || '-', g?.pagibig_number || '-', g?.tin_number || '-'];
+        return [p.employee_id || '-', p.full_name || 'Unknown', p.designation || '-', p.employee_email || '-', g?.employment_status || '-', g?.hired_date || '-'];
       });
   };
 
@@ -387,7 +389,7 @@ export default function HRDashboard() {
 
       downloadCsv(
         'employee-master-list.csv',
-        ['Employee ID', 'Full Name', 'Designation', 'Email', 'Employment Status', 'Hired Date', 'SSS', 'PhilHealth', 'Pag-IBIG', 'TIN'],
+        ['Employee ID', 'Full Name', 'Designation', 'Email', 'Employment Status', 'Hired Date'],
         rows
       );
       setExportMsg({ type: 'success', text: 'Employee master list downloaded.' });
@@ -407,7 +409,7 @@ export default function HRDashboard() {
       printReportAsPdf(
         'Employee Master List',
         'All active employee profiles',
-        ['Employee ID', 'Full Name', 'Designation', 'Email', 'Employment Status', 'Hired Date', 'SSS', 'PhilHealth', 'Pag-IBIG', 'TIN'],
+        ['Employee ID', 'Full Name', 'Designation', 'Email', 'Employment Status', 'Hired Date'],
         rows
       );
       setExportMsg({ type: 'success', text: 'Employee Master List opened. Choose “Save as PDF” in the print dialog.' });
@@ -472,7 +474,7 @@ export default function HRDashboard() {
       return (a.profiles?.full_name || '').localeCompare(b.profiles?.full_name || '');
     });
     const formatTime = (iso: string | null) => iso
-      ? new Date(iso).toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit', second: '2-digit' })
+      ? new Date(iso).toLocaleTimeString('en-US', { timeZone: 'Asia/Riyadh', hour: '2-digit', minute: '2-digit', second: '2-digit' })
       : '-';
     const rows = logs.map((log) => {
       const isLate = log.status?.toLowerCase() === 'late' && !!log.time_in;
@@ -606,7 +608,7 @@ export default function HRDashboard() {
   const [quickViewProfile, setQuickViewProfile] = useState<Profile | null>(null);
   const [leaveCalendarOpen, setLeaveCalendarOpen] = useState(false);
   const [leaveCalendarMonth, setLeaveCalendarMonth] = useState(() =>
-    new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila', year: 'numeric', month: '2-digit' }).format(new Date()).slice(0, 7)
+    new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Riyadh', year: 'numeric', month: '2-digit' }).format(new Date()).slice(0, 7)
   );
   const [selectedCalendarDate, setSelectedCalendarDate] = useState<string | null>(null);
   const [darkMode, setDarkMode] = useState(false);
@@ -1049,23 +1051,10 @@ export default function HRDashboard() {
   };
 
   // Computes Present/Late the same way as everywhere else in the app,
-  // based on the claimed time-in in Philippine time. Only relevant for
+  // based on the claimed time-in in Jeddah time. Only relevant for
   // TimeIn-type disputes -- TimeOut disputes don't change the Present/
   // Late status, since that's determined solely by time_in.
-  const computeStatusForTime = (isoString: string) => {
-    const parts = new Intl.DateTimeFormat('en-US', {
-      timeZone: 'Asia/Manila',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-    }).formatToParts(new Date(isoString)).reduce<Record<string, string>>((acc, p) => {
-      acc[p.type] = p.value;
-      return acc;
-    }, {});
-    const hour = parseInt(parts.hour, 10);
-    const minute = parseInt(parts.minute, 10);
-    return computeAttendanceStatus(hour, minute, lateCutoffHour, lateCutoffMinute);
-  };
+  const computeStatusForTime = (isoString: string) => attendanceTiming(isoString, lateCutoffHour, lateCutoffMinute).status;
 
   const approveDispute = async (dispute: AttendanceDispute) => {
     setDisputeActionLoadingId(dispute.id);
@@ -1178,6 +1167,10 @@ export default function HRDashboard() {
   };
 
   const approveLeave = async (leave: LeaveRequest) => {
+    if (countLeaveDays(leave.start_date, leave.end_date) === 0) {
+      setLeaveMsg({ type: 'error', text: 'This request has no scheduled working days. Friday, Saturday, and company holidays are not charged as leave.' });
+      return;
+    }
     setLeaveActionLoadingId(leave.id);
     setLeaveMsg(null);
     try {
@@ -1233,19 +1226,19 @@ export default function HRDashboard() {
     }
   };
 
-  // Converts a UTC ISO timestamp to its Philippine calendar date
+  // Converts a UTC ISO timestamp to its Jeddah calendar date
   // ("YYYY-MM-DD"). Comparing this instead of the raw UTC prefix avoids
   // misfiling records near midnight (PH is UTC+8, so a log_time_in of
-  // "2026-07-05T17:30:00Z" is already July 6 in Manila).
-  const toManilaDateString = (iso: string) =>
-    new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila' }).format(new Date(iso));
+  // "2026-07-05T17:30:00Z" is already July 6 in Jeddah).
+  const toJeddahDateString = (iso: string) =>
+    new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Riyadh' }).format(new Date(iso));
 
   // Cutoff key format: "YYYY-MM:H1" (days 1-15) or "YYYY-MM:H2" (days
   // 16 to end of month) -- the standard PH semi-monthly payroll split.
-  const matchesCutoff = (manilaDate: string, cutoffKey: string) => {
+  const matchesCutoff = (jeddahDate: string, cutoffKey: string) => {
     const [ym, half] = cutoffKey.split(':');
-    if (!manilaDate.startsWith(ym)) return false;
-    const day = parseInt(manilaDate.split('-')[2], 10);
+    if (!jeddahDate.startsWith(ym)) return false;
+    const day = parseInt(jeddahDate.split('-')[2], 10);
     return half === 'H1' ? day <= 15 : day >= 16;
   };
 
@@ -1302,19 +1295,7 @@ export default function HRDashboard() {
   // don't store an exact minutes-late value anywhere. Status is
   // compared case-insensitively since it can also be hand-edited
   // directly in Supabase (e.g. "late" instead of "Late").
-  const getMinutesLate = (timeInIso: string) => {
-    const parts = new Intl.DateTimeFormat('en-CA', {
-      timeZone: 'Asia/Manila',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-    })
-      .formatToParts(new Date(timeInIso))
-      .reduce((acc: any, p) => { acc[p.type] = p.value; return acc; }, {});
-    const minutesSinceMidnight = parseInt(parts.hour, 10) * 60 + parseInt(parts.minute, 10);
-    const cutoffMinutes = lateCutoffHour * 60 + lateCutoffMinute;
-    return Math.max(0, minutesSinceMidnight - cutoffMinutes);
-  };
+  const getMinutesLate = (timeInIso: string) => attendanceTiming(timeInIso, lateCutoffHour, lateCutoffMinute).minutesLate;
 
   const formatLateDuration = (mins: number) => {
     if (mins <= 0) return '0 min';
@@ -1398,10 +1379,6 @@ export default function HRDashboard() {
       employee_id: p.employee_id || '',
       designation: p.designation || '',
       employee_email: p.employee_email || '',
-      sss_number: '',
-      philhealth_number: '',
-      pagibig_number: '',
-      tin_number: '',
       hired_date: '',
       employment_status: '',
     });
@@ -1417,17 +1394,13 @@ export default function HRDashboard() {
 
     const { data: govIdData } = await supabase
       .from('employee_government_ids')
-      .select('sss_number, philhealth_number, pagibig_number, tin_number, hired_date, employment_status')
+      .select('hired_date, employment_status')
       .eq('user_id', p.id)
       .maybeSingle();
 
     if (govIdData) {
       setEditing((prev) => ({
         ...prev,
-        sss_number: govIdData.sss_number ?? '',
-        philhealth_number: govIdData.philhealth_number ?? '',
-        pagibig_number: govIdData.pagibig_number ?? '',
-        tin_number: govIdData.tin_number ?? '',
         hired_date: govIdData.hired_date ?? '',
         employment_status: govIdData.employment_status ?? '',
       }));
@@ -1526,13 +1499,9 @@ export default function HRDashboard() {
       return;
     }
 
-    // Upsert government IDs into their own table -- only if HR actually
+    // Upsert employment details into their existing table -- only if HR actually
     // filled in at least one of the fields.
     if (
-      editing.sss_number.trim() ||
-      editing.philhealth_number.trim() ||
-      editing.pagibig_number.trim() ||
-      editing.tin_number.trim() ||
       editing.hired_date.trim() ||
       editing.employment_status.trim()
     ) {
@@ -1541,10 +1510,6 @@ export default function HRDashboard() {
         .from('employee_government_ids')
         .upsert({
           user_id: editing.id,
-          sss_number: editing.sss_number.trim() || null,
-          philhealth_number: editing.philhealth_number.trim() || null,
-          pagibig_number: editing.pagibig_number.trim() || null,
-          tin_number: editing.tin_number.trim() || null,
           hired_date: editing.hired_date.trim() || null,
           employment_status: editing.employment_status.trim() || null,
           updated_at: new Date().toISOString(),
@@ -1552,7 +1517,7 @@ export default function HRDashboard() {
         }, { onConflict: 'user_id' });
 
       if (govIdError) {
-        console.error('Error saving government IDs:', govIdError);
+        console.error('Error saving employment details:', govIdError);
         setErrorMsg(getFriendlyErrorMessage(govIdError.message));
         setSaveLoading(false);
         return;
@@ -1697,14 +1662,14 @@ export default function HRDashboard() {
     }
   };
 
-  const todayManila = useMemo(() => {
-    const fmt = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila' });
+  const todayJeddah = useMemo(() => {
+    const fmt = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Riyadh' });
     return fmt.format(new Date()); // "YYYY-MM-DD"
   }, []);
 
   const todaysLogs = useMemo(
-    () => attendance.filter((log) => log.time_in && toManilaDateString(log.time_in) === todayManila),
-    [attendance, todayManila]
+    () => attendance.filter((log) => log.time_in && toJeddahDateString(log.time_in) === todayJeddah),
+    [attendance, todayJeddah]
   );
   // Present = every employee who has successfully timed in today.
   // Late is a subset of Present, so late employees remain included here.
@@ -1727,9 +1692,9 @@ export default function HRDashboard() {
     const total = employee.total_credits ?? fallbackLeaveCredits;
     return total - (employee.used_credits ?? 0) <= 3;
   }).length;
-  const upcomingHolidaysCount = holidays.filter((holiday) => holiday.holiday_date >= todayManila).length;
+  const upcomingHolidaysCount = holidays.filter((holiday) => holiday.holiday_date >= todayJeddah).length;
   const announcementModuleLabel = announcementUpdatedAt
-    ? `Updated ${new Date(announcementUpdatedAt).toLocaleDateString('en-US', { timeZone: 'Asia/Manila', month: 'short', day: 'numeric' })}`
+    ? `Updated ${new Date(announcementUpdatedAt).toLocaleDateString('en-US', { timeZone: 'Asia/Riyadh', month: 'short', day: 'numeric' })}`
     : 'Create an announcement';
 
   // Employees with no time-in yet today. This is intentionally a live,
@@ -1743,15 +1708,15 @@ export default function HRDashboard() {
     () =>
       new Set(
         leaveRequests
-          .filter((l) => l.status === 'Approved' && l.start_date <= todayManila && l.end_date >= todayManila)
+          .filter((l) => isWorkingDate(todayJeddah, holidays.map(h => h.holiday_date)) && l.status === 'Approved' && l.start_date <= todayJeddah && l.end_date >= todayJeddah)
           .map((l) => l.employee?.id)
       ),
-    [leaveRequests, todayManila]
+    [leaveRequests, todayJeddah, holidays]
   );
 
   const notYetTimedInToday = useMemo(
-    () => profiles.filter((p) => !todaysLogs.some((log) => log.user_id === p.id) && !onApprovedLeaveToday.has(p.id)),
-    [profiles, todaysLogs, onApprovedLeaveToday]
+    () => !isWorkingDate(todayJeddah, holidays.map(h => h.holiday_date)) ? [] : profiles.filter((p) => !todaysLogs.some((log) => log.user_id === p.id) && !onApprovedLeaveToday.has(p.id)),
+    [profiles, todaysLogs, onApprovedLeaveToday, todayJeddah, holidays]
   );
   const onLeaveTodayCount = onApprovedLeaveToday.size;
 
@@ -1785,7 +1750,7 @@ export default function HRDashboard() {
   const disputeClaimed = (d: AttendanceDispute) => ((d.dispute_type || 'TimeIn') === 'TimeOut' ? d.claimed_time_out : d.claimed_time_in);
   const disputeFieldLabel = (d: AttendanceDispute) => ((d.dispute_type || 'TimeIn') === 'TimeOut' ? 'Time-Out' : 'Time-In');
   const formatPh = (iso: string) =>
-    new Date(iso).toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    new Date(iso).toLocaleTimeString('en-US', { timeZone: 'Asia/Riyadh', hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
   const globalEmployeeMatches = useMemo(() => {
     const query = globalEmployeeSearch.trim().toLowerCase();
@@ -1818,7 +1783,7 @@ export default function HRDashboard() {
       return {
         date,
         day,
-        leaves: leaveRequests.filter((leave) => leave.status === 'Approved' && leave.start_date <= date && leave.end_date >= date),
+        leaves: leaveRequests.filter((leave) => isWorkingDate(date, holidays.map(h => h.holiday_date)) && leave.status === 'Approved' && leave.start_date <= date && leave.end_date >= date),
         holiday: holidays.find((holiday) => holiday.holiday_date === date) ?? null,
       };
     });
@@ -1829,7 +1794,7 @@ export default function HRDashboard() {
     : null;
 
   const attendanceInsights = useMemo(() => {
-    const currentMonth = todayManila.slice(0, 7);
+    const currentMonth = todayJeddah.slice(0, 7);
     const [year, month] = currentMonth.split('-').map(Number);
     const previousDate = new Date(year, month - 2, 1);
     const previousMonth = `${previousDate.getFullYear()}-${String(previousDate.getMonth() + 1).padStart(2, '0')}`;
@@ -1854,7 +1819,7 @@ export default function HRDashboard() {
     });
     const topLateEmployees = Array.from(lateByEmployee.entries()).sort((a, b) => b[1] - a[1]).slice(0, 5);
     return { currentMonth, current, previous, topLateEmployees };
-  }, [attendance, todayManila]);
+  }, [attendance, todayJeddah]);
 
   const pendingDisputesCount = disputes.filter((dispute) => dispute.status === 'Pending').length;
   const pendingLeaveCount = leaveRequests.filter((leave) => leave.status === 'Pending').length;
@@ -1882,7 +1847,7 @@ export default function HRDashboard() {
           : [];
 
   const approvedLeavesToday = leaveRequests.filter(
-    (leave) => leave.status === 'Approved' && leave.start_date <= todayManila && leave.end_date >= todayManila
+    (leave) => isWorkingDate(todayJeddah, holidays.map(h => h.holiday_date)) && leave.status === 'Approved' && leave.start_date <= todayJeddah && leave.end_date >= todayJeddah
   );
 
   const dailyOverviewMeta = dailyOverviewModal ? {
@@ -2020,7 +1985,7 @@ export default function HRDashboard() {
           <div className="flex items-center justify-between sm:justify-end gap-3 flex-shrink-0">
             <span className="text-[10px] text-slate-400 font-medium">
               <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5" />
-              {lastUpdatedAt ? `Updated ${lastUpdatedAt.toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit' })}` : 'Loading live data'}
+              {lastUpdatedAt ? `Updated ${lastUpdatedAt.toLocaleTimeString('en-US', { timeZone: 'Asia/Riyadh', hour: '2-digit', minute: '2-digit' })}` : 'Loading live data'}
             </span>
             <button type="button" onClick={refreshAllData} disabled={refreshing} className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-2 text-[10px] font-bold text-slate-700 transition hover:bg-slate-200 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700">
               <RefreshCw size={13} className={refreshing ? 'animate-spin' : ''} /> Refresh
@@ -2076,9 +2041,9 @@ export default function HRDashboard() {
 
         <DailyOverviewModal modal={dailyOverviewModal} meta={dailyOverviewMeta} records={dailyOverviewRecords} initials={initials} setModal={setDailyOverviewModal} />
 
-        <EmployeeQuickViewModal fallbackLeaveCredits={fallbackLeaveCredits} formatPh={formatPh} initials={initials} openPayslipsModal={openPayslipsModal} openProfileChoice={openProfileChoice} quickViewAttendance={quickViewAttendance} quickViewCredits={quickViewCredits} quickViewProfile={quickViewProfile} scrollToDashboardSection={scrollToDashboardSection} setAttendanceHistoryOpen={setAttendanceHistoryOpen} setCutoffFilter={setCutoffFilter} setQuickViewProfile={setQuickViewProfile} setSearchTerm={setSearchTerm} setSelectedDate={setSelectedDate} statusTagClass={statusTagClass} todayManila={todayManila} />
+        <EmployeeQuickViewModal fallbackLeaveCredits={fallbackLeaveCredits} formatPh={formatPh} initials={initials} openPayslipsModal={openPayslipsModal} openProfileChoice={openProfileChoice} quickViewAttendance={quickViewAttendance} quickViewCredits={quickViewCredits} quickViewProfile={quickViewProfile} scrollToDashboardSection={scrollToDashboardSection} setAttendanceHistoryOpen={setAttendanceHistoryOpen} setCutoffFilter={setCutoffFilter} setQuickViewProfile={setQuickViewProfile} setSearchTerm={setSearchTerm} setSelectedDate={setSelectedDate} statusTagClass={statusTagClass} todayJeddah={todayJeddah} />
 
-        <TeamLeaveCalendarModal open={leaveCalendarOpen} onClose={() => setLeaveCalendarOpen(false)} calendarData={calendarData} leaveCalendarMonth={leaveCalendarMonth} selectedCalendarDate={selectedCalendarDate} selectedCalendarDay={selectedCalendarDay} setLeaveCalendarMonth={setLeaveCalendarMonth} setSelectedCalendarDate={setSelectedCalendarDate} todayManila={todayManila} />
+        <TeamLeaveCalendarModal open={leaveCalendarOpen} onClose={() => setLeaveCalendarOpen(false)} calendarData={calendarData} leaveCalendarMonth={leaveCalendarMonth} selectedCalendarDate={selectedCalendarDate} selectedCalendarDay={selectedCalendarDay} setLeaveCalendarMonth={setLeaveCalendarMonth} setSelectedCalendarDate={setSelectedCalendarDate} todayJeddah={todayJeddah} />
 
         <AnnouncementsModal open={announcementOpen} onClose={() => setAnnouncementOpen(false)} announcementContent={announcementContent} announcementId={announcementId} announcementImageInputRef={announcementImageInputRef} announcementImagePreview={announcementImagePreview} announcementImageUrl={announcementImageUrl} announcementLoading={announcementLoading} announcementMsg={announcementMsg} announcementRemoveImage={announcementRemoveImage} announcementSaving={announcementSaving} announcementUpdatedAt={announcementUpdatedAt} clearAnnouncementImage={clearAnnouncementImage} handleAnnouncementImageChange={handleAnnouncementImageChange} publishAnnouncement={publishAnnouncement} setAnnouncementContent={setAnnouncementContent} />
 
@@ -2208,7 +2173,7 @@ export default function HRDashboard() {
               <h3 className="text-sm mb-0">
                 Raw Attendance Log
                 {cutoffFilter ? <span className="block text-[10px] font-medium text-slate-400 normal-case tracking-normal mt-0.5">Showing {formatCutoffLabel(cutoffFilter)}</span>
-                  : selectedDate && <span className="block text-[10px] font-medium text-slate-400 normal-case tracking-normal mt-0.5">{selectedDate === todayManila ? "Today's records" : `Records for ${selectedDate}`}</span>}
+                  : selectedDate && <span className="block text-[10px] font-medium text-slate-400 normal-case tracking-normal mt-0.5">{selectedDate === todayJeddah ? "Today's records" : `Records for ${selectedDate}`}</span>}
                 {searchTerm && (
                   <span className="block text-[10px] font-bold text-red-600 normal-case tracking-normal mt-0.5">
                     {formatLateDuration(filteredTotalLateMinutes)} late total{cutoffFilter ? ` (${formatCutoffLabel(cutoffFilter)})` : selectedDate ? ` (${selectedDate})` : ''}
@@ -2251,9 +2216,9 @@ export default function HRDashboard() {
               )}
               <input type="date" className="input-field !py-1.5 !text-xs !min-h-0 w-auto" value={selectedDate} onChange={(e) => { setSelectedDate(e.target.value); if (e.target.value) setCutoffFilter(''); }} />
               <div className="flex gap-3">
-                {selectedDate !== todayManila && <button onClick={() => { setSelectedDate(todayManila); setCutoffFilter(''); }} className="text-blue-600 font-bold text-xs whitespace-nowrap">Today</button>}
+                {selectedDate !== todayJeddah && <button onClick={() => { setSelectedDate(todayJeddah); setCutoffFilter(''); }} className="text-blue-600 font-bold text-xs whitespace-nowrap">Today</button>}
                 {(selectedDate || cutoffFilter) && <button onClick={() => { setSelectedDate(''); setCutoffFilter(''); }} className="text-slate-400 font-bold text-xs whitespace-nowrap">All</button>}
-                {(searchTerm || selectedDate !== todayManila || cutoffFilter) && <button onClick={() => { setSearchTerm(''); setSelectedDate(todayManila); setCutoffFilter(''); setAttendancePage(1); }} className="text-rose-500 font-bold text-xs whitespace-nowrap">Reset Filters</button>}
+                {(searchTerm || selectedDate !== todayJeddah || cutoffFilter) && <button onClick={() => { setSearchTerm(''); setSelectedDate(todayJeddah); setCutoffFilter(''); setAttendancePage(1); }} className="text-rose-500 font-bold text-xs whitespace-nowrap">Reset Filters</button>}
               </div>
             </div>
             <div className="min-h-[260px] max-w-full overflow-x-auto overscroll-x-contain" role="region" aria-label="Scrollable raw attendance records" tabIndex={0}>
@@ -2272,9 +2237,9 @@ export default function HRDashboard() {
                   {paginatedAttendance.map((log) => (
                     <tr key={log.id} className="hover:bg-slate-50 transition">
                       <td className="px-4 py-3 font-medium text-slate-900 text-xs">{log.profiles?.full_name}</td>
-                      <td className="px-4 py-3 text-slate-600 text-xs">{log.log_date ? new Date(log.log_date).toLocaleDateString('en-US', { timeZone: 'Asia/Manila', month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}</td>
-                      <td className="px-4 py-3 text-slate-600 text-xs">{log.time_in ? new Date(log.time_in).toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit', second: '2-digit' }) : 'N/A'}</td>
-                      <td className="px-4 py-3 text-slate-600 text-xs">{log.time_out ? new Date(log.time_out).toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—'}</td>
+                      <td className="px-4 py-3 text-slate-600 text-xs">{log.log_date ? new Date(log.log_date).toLocaleDateString('en-US', { timeZone: 'Asia/Riyadh', month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}</td>
+                      <td className="px-4 py-3 text-slate-600 text-xs">{log.time_in ? new Date(log.time_in).toLocaleTimeString('en-US', { timeZone: 'Asia/Riyadh', hour: '2-digit', minute: '2-digit', second: '2-digit' }) : 'N/A'}</td>
+                      <td className="px-4 py-3 text-slate-600 text-xs">{log.time_out ? new Date(log.time_out).toLocaleTimeString('en-US', { timeZone: 'Asia/Riyadh', hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—'}</td>
                       <td className="px-4 py-3"><span className={statusTagClass(log.status)}>{log.status}</span></td>
                     </tr>
                   ))}

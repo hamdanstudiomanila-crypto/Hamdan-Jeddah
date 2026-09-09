@@ -156,9 +156,9 @@ describe('PDF extraction checks', () => {
   it('never calls cutoff basic pay a monthly salary', () => {
     expect(payslipAnswer(extraction, 'basic_pay', 'Test cutoff', false)).toContain('for this cutoff');
   });
-  it('handles leap-year cutoff dates and Manila year boundaries', () => {
+  it('handles leap-year cutoff dates and Jeddah year boundaries', () => {
     expect(cutoffDates('2028-02:H2').end).toBe('2028-02-29');
-    expect(periodDates('current_year', new Date('2026-12-31T16:00:00Z'))).toEqual({ start: '2027-01-01', end: '2027-12-31', today: '2027-01-01', year: 2027 });
+    expect(periodDates('current_year', new Date('2026-12-31T21:00:00Z'))).toEqual({ start: '2027-01-01', end: '2027-12-31', today: '2027-01-01', year: 2027 });
   });
   it('rejects invalid classifier owner and metric independently from n8n', () => {
     for (const change of [{ target_scope: 'other' }, { target_name: 'Bob' }, { metric: 'sql' }, { period: 'current_year' }]) expect(() => validateClassification({ ...classification, ...change })).toThrow();
@@ -283,10 +283,10 @@ describe('conversation, profile, and complete periods', () => {
     expect(validateClassification(howTo)).toMatchObject({ intent: 'how_to', metric: 'payslip_access' });
     for (const change of [{ target_scope: 'self' }, { target_scope: 'other' }, { target_name: 'Bob' }, { metric: 'sql' }]) expect(() => validateClassification({ ...howTo, ...change })).toThrow();
   });
-  it('resolves full months including leap years in Manila', () => {
+  it('resolves full months including leap years in Jeddah', () => {
     expect(periodDates('current_month', new Date('2026-09-07T01:00:00Z'))).toMatchObject({ start: '2026-09-01', end: '2026-09-30' });
     expect(periodDates('current_month', new Date('2028-02-10T01:00:00Z')).end).toBe('2028-02-29');
-    expect(periodDates('current_month', new Date('2026-12-31T16:00:00Z'))).toMatchObject({ start: '2027-01-01', end: '2027-01-31' });
+    expect(periodDates('current_month', new Date('2026-12-31T21:00:00Z'))).toMatchObject({ start: '2027-01-01', end: '2027-01-31' });
   });
   it('includes approved leave later in the current month and returns matching dates only', async () => {
     const dates = periodDates('current_month');

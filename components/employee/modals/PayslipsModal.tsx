@@ -17,7 +17,7 @@ export default function PayslipsModal({ open, onClose, loading, payslips, downlo
             <div className="min-w-0">
               <div className="flex items-center gap-2"><p className="truncate text-sm font-extrabold text-slate-950 dark:text-white">{payslip.cutoff_label}</p>{!payslip.acknowledged_at && <span className="rounded-full bg-blue-600 px-2 py-0.5 text-[8px] font-extrabold uppercase text-white">New</span>}</div>
               <p className="mt-1 truncate text-xs text-slate-600 dark:text-slate-300">{payslip.file_name}</p>
-              <p className="mt-1 text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{new Date(payslip.uploaded_at).toLocaleDateString('en-US', { timeZone: 'Asia/Manila', month: 'short', day: 'numeric', year: 'numeric' })}</p>
+              <p className="mt-1 text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{new Date(payslip.uploaded_at).toLocaleDateString('en-US', { timeZone: 'Asia/Riyadh', month: 'short', day: 'numeric', year: 'numeric' })}</p>
               {payslip.acknowledged_at && <p className="mt-1 text-[9px] font-bold text-green-600 dark:text-green-300">Acknowledged</p>}
             </div>
             <div className="mt-3 flex items-center gap-2 sm:mt-0 sm:flex-col sm:items-stretch">

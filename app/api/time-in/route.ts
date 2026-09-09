@@ -3,14 +3,15 @@ import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { createSupabaseAdminClient } from '@/lib/server/supabase-admin';
 import { isMaintenanceMode, readServerAppSettings } from '@/lib/server/app-settings';
-import { computeAttendanceStatus } from '@/lib/attendance-rules';
+import { workDate } from '@/lib/work-schedule';
+import { attendanceTiming } from '@/lib/attendance-rules';
 
 // Fallback values used only if app_settings is somehow unreachable or
 // missing rows -- keeps time-in from hard-failing over a settings read
 // hiccup, while normal operation always uses the configurable values
 // from the database (editable via Super Admin -> App Settings).
-const FALLBACK_LATE_CUTOFF_HOUR = 9;
-const FALLBACK_LATE_CUTOFF_MINUTE = 15;
+const FALLBACK_LATE_CUTOFF_HOUR = 8;
+const FALLBACK_LATE_CUTOFF_MINUTE = 0;
 
 function getClientIp(request: Request): string | null {
   const forwardedFor = request.headers.get('x-forwarded-for');
@@ -111,29 +112,12 @@ export async function POST(request: Request) {
     const lateCutoffMinute = typeof settingsMap.late_cutoff_minute === 'number' ? settingsMap.late_cutoff_minute : FALLBACK_LATE_CUTOFF_MINUTE;
 
     // --- Step 3: Compute today's date and Present/Late status using
-    // the SERVER clock in Manila time, not anything the client sends.
+    // the SERVER clock in Jeddah time, not anything the client sends.
     // This closes the same "spoofed device clock" gap we fixed earlier
     // for the timestamp itself. ---
     const now = new Date();
-    const manilaParts = new Intl.DateTimeFormat('en-CA', {
-      timeZone: 'Asia/Manila',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-    })
-      .formatToParts(now)
-      .reduce<Record<string, string>>((acc, p) => {
-        acc[p.type] = p.value;
-        return acc;
-      }, {});
-
-    const logDate = `${manilaParts.year}-${manilaParts.month}-${manilaParts.day}`;
-    const hour = parseInt(manilaParts.hour, 10);
-    const minute = parseInt(manilaParts.minute, 10);
-    const status = computeAttendanceStatus(hour, minute, lateCutoffHour, lateCutoffMinute);
+    const logDate = workDate(now);
+    const status = attendanceTiming(now.toISOString(), lateCutoffHour, lateCutoffMinute).status;
 
     // --- Step 4: Prevent double time-in for today. ---
     const supabaseAdmin = createSupabaseAdminClient();

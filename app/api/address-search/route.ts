@@ -120,8 +120,10 @@ export async function GET(request: NextRequest) {
   const url = new URL(PHOTON_ENDPOINT);
   url.searchParams.set('q', query);
   url.searchParams.set('limit', '8');
-  url.searchParams.set('lat', '14.5547');
-  url.searchParams.set('lon', '121.0244');
+  url.searchParams.set('countrycode', 'SA');
+  url.searchParams.set('lang', 'en');
+  url.searchParams.set('lat', '21.4858');
+  url.searchParams.set('lon', '39.1925');
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
@@ -189,7 +191,7 @@ export async function GET(request: NextRequest) {
           props.countrycode ?? props.country_code ?? ''
         ).toLowerCase();
 
-        if (countryCode && countryCode !== 'ph') {
+        if (countryCode && countryCode !== 'sa') {
           return null;
         }
 

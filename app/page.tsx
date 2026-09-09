@@ -144,7 +144,7 @@ export default function LoginPage() {
       </div>
 
       <p className="relative z-10 text-sm text-gray-400 mt-10 font-medium">
-        © {new Date().getFullYear()} Hamdan Studio Manila. All rights reserved.
+        © {new Date().getFullYear()} Hamdan Studio Jeddah. All rights reserved.
       </p>
     </main>
   );

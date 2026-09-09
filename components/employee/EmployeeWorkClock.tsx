@@ -1,6 +1,7 @@
 'use client';
 
 import { memo, useEffect, useState } from 'react';
+import { isWorkingDate, workDate } from '@/lib/work-schedule';
 import { Clock3 } from 'lucide-react';
 
 type TodayLog = {
@@ -11,6 +12,7 @@ type TodayLog = {
 function getJeddahClock() {
   const now = new Date();
   return {
+    dateKey: workDate(now),
     time: now.toLocaleTimeString('en-US', {
       timeZone: 'Asia/Riyadh',
       hour: 'numeric',
@@ -28,8 +30,9 @@ function getJeddahClock() {
   };
 }
 
-function EmployeeWorkClock({ todayLog }: { todayLog: TodayLog }) {
-  const [clock, setClock] = useState(() => ({ time: '--:--:--', date: '' }));
+function EmployeeWorkClock({ todayLog, holidays = [], startHour = 8, startMinute = 0, endHour = 18, endMinute = 0 }: { todayLog: TodayLog; holidays?: string[]; startHour?: number; startMinute?: number; endHour?: number; endMinute?: number }) {
+  const formatHour = (hour: number, minute: number) => `${hour % 12 || 12}:${String(minute).padStart(2, '0')} ${hour >= 12 ? 'PM' : 'AM'}`;
+  const [clock, setClock] = useState(() => ({ time: '--:--:--', date: '', dateKey: '' }));
 
   useEffect(() => {
     const updateClock = () => setClock(getJeddahClock());
@@ -38,14 +41,15 @@ function EmployeeWorkClock({ todayLog }: { todayLog: TodayLog }) {
     return () => window.clearInterval(timer);
   }, []);
 
+  const restDay = Boolean(clock.dateKey) && !isWorkingDate(clock.dateKey, holidays);
   const isTodayLate = todayLog?.status?.toLowerCase() === 'late';
   const todayWorkStatus = !todayLog
-    ? { label: 'No Time In', color: 'bg-red-100 text-red-700' }
+    ? { label: restDay ? 'Non-working day' : 'No Time In', color: restDay ? 'bg-slate-100 text-slate-700' : 'bg-red-100 text-red-700' }
     : isTodayLate
       ? { label: todayLog.time_out ? 'Completed · Late' : 'Working · Late', color: 'bg-orange-100 text-orange-700' }
       : { label: todayLog.time_out ? 'Completed' : 'Working', color: 'bg-green-100 text-green-700' };
 
-  const workClockTone = !todayLog
+  const workClockTone = !todayLog && !restDay
     ? {
         panel: 'from-rose-500 to-red-700',
         border: 'border-red-200 dark:border-red-900/60',
@@ -84,6 +88,7 @@ function EmployeeWorkClock({ todayLog }: { todayLog: TodayLog }) {
         </p>
         <div className="mt-3 border-t border-dashed border-slate-200 pt-2 dark:border-slate-700">
           <p className="truncate text-[9px] font-bold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-300">{clock.date}</p>
+          <p className="mt-2 text-[10px] font-semibold text-slate-500 dark:text-slate-300">Sun to Thu: {formatHour(startHour, startMinute)} to {formatHour(endHour, endMinute)}<br />Friday &amp; Saturday: Rest days</p>
         </div>
       </div>
     </div>

@@ -9,8 +9,8 @@ import {
   formatRainAmount,
   getAddressPrimaryLabel,
   getAddressSecondaryLabel,
-  getManilaDateTimeInputs,
-  getManilaForecastMaxDate,
+  getJeddahDateTimeInputs,
+  getJeddahForecastMaxDate,
   mapCommuteUIState,
   shortCommutePlace,
   unwrapCommutePayload,
@@ -39,8 +39,8 @@ export default function PlanMyCommuteModal({
   const commuteCloseButtonRef = useRef<HTMLButtonElement>(null);
   const [commuteOrigin, setCommuteOrigin] = useState('');
   const [commuteDestination, setCommuteDestination] = useState('');
-  const [commuteDepartureDate, setCommuteDepartureDate] = useState(() => getManilaDateTimeInputs().date);
-  const [commuteDepartureTime, setCommuteDepartureTime] = useState(() => getManilaDateTimeInputs().time);
+  const [commuteDepartureDate, setCommuteDepartureDate] = useState(() => getJeddahDateTimeInputs().date);
+  const [commuteDepartureTime, setCommuteDepartureTime] = useState(() => getJeddahDateTimeInputs().time);
   const [commuteLoading, setCommuteLoading] = useState(false);
   const [commuteUIState, setCommuteUIState] = useState<CommuteUIState>('idle');
   const [commuteFailedAnnouncementAssertive, setCommuteFailedAnnouncementAssertive] = useState(false);
@@ -430,14 +430,14 @@ export default function PlanMyCommuteModal({
     setCommuteUIState('idle');
     setCommuteHasAttempted(false);
     setIsCommuteFormCollapsed(false);
-    const currentManila = getManilaDateTimeInputs();
-    setCommuteDepartureDate(currentManila.date);
-    setCommuteDepartureTime(currentManila.time);
+    const currentJeddah = getJeddahDateTimeInputs();
+    setCommuteDepartureDate(currentJeddah.date);
+    setCommuteDepartureTime(currentJeddah.time);
     setOriginSuggestions([]);
     setDestinationSuggestions([]);
     setShowOriginSuggestions(false);
     setShowDestinationSuggestions(false);
-    setCommuteDestination((current) => current || initialDestination || 'Makati City');
+    setCommuteDestination((current) => current || initialDestination || 'Jeddah');
   }, [open, initialDestination]);
 
   const useCurrentLocationForCommute = () => {
@@ -527,7 +527,7 @@ export default function PlanMyCommuteModal({
     setCommuteError(null);
     try {
       const requestedDeparture = new Date(
-        `${commuteDepartureDate}T${commuteDepartureTime}:00+08:00`
+        `${commuteDepartureDate}T${commuteDepartureTime}:00+03:00`
       );
       const response = await fetch('/api/commute-check', {
         method: 'POST',
@@ -638,7 +638,7 @@ export default function PlanMyCommuteModal({
           ref={commuteModalRef}
           role="dialog"
           aria-modal="true"
-          aria-label="Plan My Commute"
+          aria-label="Plan My Commute: Jeddah"
           className={`${darkMode ? 'dark' : ''} commute-theme-scope fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/45 backdrop-blur-sm p-0 sm:p-4`}
           data-theme={darkMode ? 'dark' : 'light'}
         >
@@ -650,7 +650,7 @@ export default function PlanMyCommuteModal({
                 </div>
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="mb-0">Plan My Commute</h3>
+                    <h3 className="mb-0">Plan My Commute: Jeddah</h3>
                   </div>
                   <p className="text-slate-400 text-xs mt-1">
                     Weather and traffic advice across your selected route.
@@ -707,8 +707,8 @@ export default function PlanMyCommuteModal({
                     Select an exact address for better route accuracy.
                   </p>
                 </div>
-                <span title="Address results are limited to the Philippines" className="hidden sm:inline-flex rounded-full bg-white border border-slate-200 px-2.5 py-1 text-[8px] font-extrabold text-slate-500">
-                  PH · Philippines only
+                <span title="Address results are limited to Saudi Arabia" className="hidden sm:inline-flex rounded-full bg-white border border-slate-200 px-2.5 py-1 text-[8px] font-extrabold text-slate-500">
+                  SA · Saudi Arabia
                 </span>
               </div>
             <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
@@ -765,7 +765,7 @@ export default function PlanMyCommuteModal({
                       }}
                       autoComplete="off"
                       className="input-field w-full !h-14 !pl-10 !pr-16"
-                      placeholder="Search landmark, street, or barangay..."
+                      placeholder="Search landmark, street, or district..."
                       aria-autocomplete="list"
                       aria-controls="commute-origin-listbox"
                       aria-activedescendant={originActiveSuggestion >= 0 ? `commute-origin-option-${originActiveSuggestion}` : undefined}
@@ -814,8 +814,8 @@ export default function PlanMyCommuteModal({
                         ))}
                         {!originSearchLoading && originSuggestions.length === 0 && (
                           <div className="px-3.5 py-4 text-center">
-                            <p className="text-[10px] font-extrabold text-slate-700">{originSearchError ? 'Address search unavailable' : 'No matching Philippine address found'}</p>
-                            <p className="text-[9px] text-slate-400 mt-1">{originSearchError || 'Try a landmark, street, barangay, or city name.'}</p>
+                            <p className="text-[10px] font-extrabold text-slate-700">{originSearchError ? 'Address search unavailable' : 'No matching Saudi address found'}</p>
+                            <p className="text-[9px] text-slate-400 mt-1">{originSearchError || 'Try a landmark, street, district, or city name.'}</p>
                           </div>
                         )}
                         <div className="sticky bottom-0 border-t border-slate-100 bg-slate-50 px-3.5 py-2 text-[8px] font-semibold text-slate-400">Location data: OpenStreetMap</div>
@@ -906,7 +906,7 @@ export default function PlanMyCommuteModal({
                             : '!border-amber-400 ring-2 ring-amber-200/70'
                         : ''
                     }`}
-                    placeholder="Search landmark, street, or barangay..."
+                    placeholder="Search landmark, street, or district..."
                     aria-autocomplete="list"
                     aria-controls="commute-destination-listbox"
                     aria-activedescendant={destinationActiveSuggestion >= 0 ? `commute-destination-option-${destinationActiveSuggestion}` : undefined}
@@ -955,8 +955,8 @@ export default function PlanMyCommuteModal({
                       ))}
                       {!destinationSearchLoading && destinationSuggestions.length === 0 && (
                         <div className="px-3.5 py-4 text-center">
-                          <p className="text-[10px] font-extrabold text-slate-700">{destinationSearchError ? 'Address search unavailable' : 'No matching Philippine address found'}</p>
-                          <p className="text-[9px] text-slate-400 mt-1">{destinationSearchError || 'Try a landmark, street, barangay, or city name.'}</p>
+                          <p className="text-[10px] font-extrabold text-slate-700">{destinationSearchError ? 'Address search unavailable' : 'No matching Saudi address found'}</p>
+                          <p className="text-[9px] text-slate-400 mt-1">{destinationSearchError || 'Try a landmark, street, district, or city name.'}</p>
                         </div>
                       )}
                       <div className="sticky bottom-0 border-t border-slate-100 bg-slate-50 px-3.5 py-2 text-[8px] font-semibold text-slate-400">Location data: OpenStreetMap</div>
@@ -1006,8 +1006,8 @@ export default function PlanMyCommuteModal({
                   <input
                     type="date"
                     value={commuteDepartureDate}
-                    min={getManilaDateTimeInputs().date}
-                    max={getManilaForecastMaxDate()}
+                    min={getJeddahDateTimeInputs().date}
+                    max={getJeddahForecastMaxDate()}
                     onChange={(event) => setCommuteDepartureDate(event.target.value)}
                     className="input-field w-full"
                   />

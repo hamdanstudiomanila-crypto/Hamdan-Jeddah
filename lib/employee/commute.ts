@@ -5,9 +5,9 @@
  * second implementation of the commute workflow.
  */
 
-export const getManilaDateTimeInputs = () => {
+export const getJeddahDateTimeInputs = () => {
   const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Manila',
+    timeZone: 'Asia/Riyadh',
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
@@ -25,23 +25,23 @@ export const getManilaDateTimeInputs = () => {
   };
 };
 
-export const formatManilaClockValue = (isoValue: string | null | undefined) => {
+export const formatJeddahClockValue = (isoValue: string | null | undefined) => {
   if (!isoValue) return '--';
   const date = new Date(isoValue);
   if (!Number.isFinite(date.getTime())) return '--';
-  return date.toLocaleTimeString('en-PH', {
-    timeZone: 'Asia/Manila',
+  return date.toLocaleTimeString('en-US', {
+    timeZone: 'Asia/Riyadh',
     hour: 'numeric',
     minute: '2-digit',
   });
 };
 
-export const getManilaForecastMaxDate = () => {
-  const start = getManilaDateTimeInputs().date;
-  const date = new Date(`${start}T12:00:00+08:00`);
+export const getJeddahForecastMaxDate = () => {
+  const start = getJeddahDateTimeInputs().date;
+  const date = new Date(`${start}T12:00:00+03:00`);
   date.setUTCDate(date.getUTCDate() + 6);
   return new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Manila',
+    timeZone: 'Asia/Riyadh',
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
@@ -78,7 +78,7 @@ export const getAddressPrimaryLabel = (place: AddressSuggestion) => {
   const usefulPart = addressParts.find(
     (part) =>
       part.toLowerCase() !== originalName.toLowerCase() &&
-      !/^(metro manila|southern manila district|national capital region|philippines|\d{4,6})$/i.test(part)
+      !/^(jeddah|makkah province|makkah region|saudi arabia|\d{4,6})$/i.test(part)
   );
   const primary = genericName ? usefulPart || municipality || originalName : originalName || usefulPart || municipality || 'Location';
 
@@ -504,15 +504,15 @@ export const formatCommuteDistance = (kilometers: number | null | undefined) => 
 };
 
 export const formatCommuteClock = (isoValue: string | null | undefined) => {
-  return formatManilaClockValue(isoValue);
+  return formatJeddahClockValue(isoValue);
 };
 
 export const formatCommuteUpdatedAt = (isoValue: string | null | undefined) => {
   if (!isoValue) return '--';
   const date = new Date(isoValue);
   if (!Number.isFinite(date.getTime())) return '--';
-  return date.toLocaleTimeString('en-PH', {
-    timeZone: 'Asia/Manila',
+  return date.toLocaleTimeString('en-US', {
+    timeZone: 'Asia/Riyadh',
     hour: 'numeric',
     minute: '2-digit',
   });

@@ -162,8 +162,8 @@ export async function answerEmployeeQuestion(ctx: Context, call = workflowCall) 
       return { answer: `${tl ? 'Sarili mong attendance records' : 'Your attendance records'} (${start} ? ${end}):\n${entries || (tl ? 'Walang matching record.' : 'No matching records.')}${matching.length > 100 ? '\nShowing the latest 100 matches.' : ''}` };
     }
     if (c.metric === 'time_in' || c.metric === 'time_out') {
-      const time = (v: string | null) => v ? new Date(v).toLocaleTimeString('en-US', { timeZone: 'Asia/Manila' }) : 'Not recorded';
-      return { answer: `${tl ? 'Sarili mong attendance' : 'Your attendance'} (${start} – ${end}, Asia/Manila):\n${rows.slice(-31).map(r => `${r.log_date}: ${time(r[c.metric as 'time_in' | 'time_out'])}`).join('\n') || 'No recorded logs.'}${rows.length > 31 ? '\nShowing the latest 31 recorded days.' : ''}` };
+      const time = (v: string | null) => v ? new Date(v).toLocaleTimeString('en-US', { timeZone: 'Asia/Riyadh' }) : 'Not recorded';
+      return { answer: `${tl ? 'Sarili mong attendance' : 'Your attendance'} (${start} – ${end}, Asia/Riyadh):\n${rows.slice(-31).map(r => `${r.log_date}: ${time(r[c.metric as 'time_in' | 'time_out'])}`).join('\n') || 'No recorded logs.'}${rows.length > 31 ? '\nShowing the latest 31 recorded days.' : ''}` };
     }
     const counts = { absent_count: 0, late_count: 0, present_count: 0, leave_day_count: 0 };
     for (const r of rows) {

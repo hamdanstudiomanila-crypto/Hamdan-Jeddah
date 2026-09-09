@@ -95,9 +95,9 @@ export async function POST(request: Request) {
       );
     }
 
-    // --- Step 3: Find today's log (Manila calendar day) for this user. ---
+    // --- Step 3: Find today's log (Jeddah calendar day) for this user. ---
     const now = new Date();
-    const logDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila' }).format(now);
+    const logDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Riyadh' }).format(now);
 
     const supabaseAdmin = createSupabaseAdminClient();
     const { data: todayLog, error: fetchError } = await supabaseAdmin

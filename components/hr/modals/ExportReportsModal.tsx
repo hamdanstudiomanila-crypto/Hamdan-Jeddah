@@ -61,7 +61,7 @@ export default function ExportReportsModal({ employees, exportEmployeeId, setExp
             {/* Employee Master List */}
             <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 mb-3 dark:!border-[#34453a] dark:!bg-[#0d1510]">
               <p className="font-bold text-slate-900 text-xs mb-1 dark:!text-white">Employee Master List</p>
-              <p className="text-slate-500 text-[11px] mb-3 dark:!text-[#c4d0c7]">Name, designation, employment status, and government IDs for every employee.</p>
+              <p className="text-slate-500 text-[11px] mb-3 dark:!text-[#c4d0c7]">Name, designation, employment status, and hired date for every employee.</p>
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"

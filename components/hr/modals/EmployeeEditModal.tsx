@@ -4,7 +4,7 @@ import type { Dispatch, RefObject, SetStateAction } from 'react';
 import Spinner from '@/components/Spinner';
 import ModalShell from '@/components/shared/ModalShell';
 
-type Editing = { id: string | null; full_name: string; employee_id: string; designation: string; employee_email: string; sss_number: string; philhealth_number: string; pagibig_number: string; tin_number: string; hired_date: string; employment_status: string };
+type Editing = { id: string | null; full_name: string; employee_id: string; designation: string; employee_email: string; hired_date: string; employment_status: string };
 type ModalMode = null | 'choice' | 'edit' | 'payslips';
 type Props = { open: boolean; onClose: () => void; avatarInputRef: RefObject<HTMLInputElement | null>; avatarPreview: string | null; avatarUploading: boolean; currentAvatarUrl: string | null; editing: Editing; editingEmployeeIdConflict: string | null; handleAvatarChange: (file: File | null) => void; saveEdit: () => void | Promise<void>; saveLoading: boolean; setEditing: Dispatch<SetStateAction<Editing>>; setModalMode: Dispatch<SetStateAction<ModalMode>> };
 
@@ -59,12 +59,8 @@ export default function EmployeeEditModal({ open, onClose, avatarInputRef, avata
             />
 
             <div className="mb-6 pt-3 border-t border-slate-100">
-              <p className="label-branded mb-3">Government IDs &amp; Employment Details</p>
+              <p className="label-branded mb-3">Employment Details</p>
               <div className="space-y-3">
-                <input className="input-field" value={editing.sss_number} onChange={(e) => setEditing({ ...editing, sss_number: e.target.value })} placeholder="SSS Number" />
-                <input className="input-field" value={editing.philhealth_number} onChange={(e) => setEditing({ ...editing, philhealth_number: e.target.value })} placeholder="PhilHealth Number" />
-                <input className="input-field" value={editing.pagibig_number} onChange={(e) => setEditing({ ...editing, pagibig_number: e.target.value })} placeholder="Pag-IBIG Number" />
-                <input className="input-field" value={editing.tin_number} onChange={(e) => setEditing({ ...editing, tin_number: e.target.value })} placeholder="TIN Number" />
                 <div>
                   <label className="label-branded">Hired Date</label>
                   <input type="date" className="input-field" value={editing.hired_date} onChange={(e) => setEditing({ ...editing, hired_date: e.target.value })} />

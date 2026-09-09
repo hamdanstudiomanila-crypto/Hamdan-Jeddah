@@ -66,12 +66,12 @@ export const SYSTEM_KNOWLEDGE: Record<SystemKnowledgeMetric, { en: string; tl: s
     tl: 'Kailangan ng password confirmation bago basahin ng Ask AI ang payslip PDF. Vine-verify ang password sa Supabase at hindi ito ipinapadala sa n8n o Gemini. Short-lived ang unlock at para lang sa sariling payslips ng signed-in employee.',
   },
   commute_planner: {
-    en: 'Plan My Commute helps check a selected route using exact From and To addresses, departure date/time, route weather, rain risk, traffic delays, and best departure advice. Address search is focused on the Philippines and works best when you pick exact suggestions.',
-    tl: 'Ang Plan My Commute ay tumutulong mag-check ng selected route gamit ang exact From at To addresses, departure date/time, route weather, rain risk, traffic delays, at best departure advice. Philippines-focused ang address search at mas accurate kapag exact suggestion ang pinili.',
+    en: 'Plan My Commute helps check a selected route using exact From and To addresses, departure date/time, route weather, rain risk, traffic delays, and best departure advice. Address search is focused on Jeddah, Saudi Arabia and works best when you pick exact suggestions.',
+    tl: 'Ang Plan My Commute ay tumutulong mag-check ng selected route gamit ang exact From at To addresses, departure date/time, route weather, rain risk, traffic delays, at best departure advice. Jeddah-focused ang address search at mas accurate kapag exact suggestion ang pinili.',
   },
   profile_update: {
-    en: 'Open Profile and choose Edit Profile to update fields the portal allows you to edit. Core employment details, role, government IDs, payroll data, and other restricted profile fields must be handled by HR or an admin.',
-    tl: 'Buksan ang Profile at piliin ang Edit Profile para i-update ang fields na pinapayagan ng portal. Core employment details, role, government IDs, payroll data, at ibang restricted profile fields ay kailangang idaan sa HR o admin.',
+    en: 'Open Profile and choose Edit Profile to update fields the portal allows you to edit. Core employment details, role, payroll data, and other restricted profile fields must be handled by HR or an admin.',
+    tl: 'Buksan ang Profile at piliin ang Edit Profile para i-update ang fields na pinapayagan ng portal. Core employment details, role, payroll data, at ibang restricted profile fields ay kailangang idaan sa HR o admin.',
   },
   directory_lookup: {
     en: 'Ask AI can help with approved work-directory information for active employees, such as full name, designation, and work email. It cannot share private employee records like salary, payslips, attendance, leave details, government IDs, personal email, phone, or address.',

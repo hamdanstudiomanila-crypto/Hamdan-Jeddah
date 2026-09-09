@@ -26,9 +26,9 @@ function normalizeVariant(value: AppSettingsValues[string]): SeasonalThemeVarian
   return value === 'halloween' || value === 'new_year' || value === 'rainy' || value === 'sunny' ? value : 'christmas';
 }
 
-function manilaDate(now: Date) {
+function jeddahDate(now: Date) {
   return new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Manila', year: 'numeric', month: '2-digit', day: '2-digit',
+    timeZone: 'Asia/Riyadh', year: 'numeric', month: '2-digit', day: '2-digit',
   }).format(now);
 }
 
@@ -38,7 +38,7 @@ export function resolveSeasonalTheme(settings: AppSettingsValues, portal: Season
   const scope = typeof settings.seasonal_theme_scope === 'string' ? settings.seasonal_theme_scope : 'employee_only';
   const start = typeof settings.seasonal_theme_start_date === 'string' ? settings.seasonal_theme_start_date : '';
   const end = typeof settings.seasonal_theme_end_date === 'string' ? settings.seasonal_theme_end_date : '';
-  const today = manilaDate(now);
+  const today = jeddahDate(now);
   const portalAllowed = portal === 'employee' || scope === 'employee_and_hr';
   const beforeStart = Boolean(start && today < start);
   const afterEnd = Boolean(end && today > end);

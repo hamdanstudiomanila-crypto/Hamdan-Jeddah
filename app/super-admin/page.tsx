@@ -275,7 +275,7 @@ export default function SuperAdminDashboard() {
 
   const formatHealthTimestamp = (iso: string | null) =>
     iso
-      ? new Date(iso).toLocaleString('en-US', { timeZone: 'Asia/Manila', month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+      ? new Date(iso).toLocaleString('en-US', { timeZone: 'Asia/Riyadh', month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })
       : 'Never';
 
   // --- App Settings ---
@@ -355,13 +355,13 @@ export default function SuperAdminDashboard() {
 
   const [attendanceSearch, setAttendanceSearch] = useState('');
   const [attendanceDateFilter, setAttendanceDateFilter] = useState(() =>
-    new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila' }).format(new Date())
+    new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Riyadh' }).format(new Date())
   );
   const [editingLog, setEditingLog] = useState<{
     id: string;
     employeeName: string;
-    timeInLocal: string; // datetime-local value, in PH time
-    timeOutLocal: string; // datetime-local value, in PH time (can be empty)
+    timeInLocal: string; // datetime-local value, in Jeddah time
+    timeOutLocal: string; // datetime-local value, in Jeddah time (can be empty)
     status: string;
   } | null>(null);
   const [logSaving, setLogSaving] = useState(false);
@@ -427,21 +427,21 @@ export default function SuperAdminDashboard() {
     }
   };
 
-  // --- Manila timezone helpers ---
-  // The database always stores UTC. The Philippines has a fixed UTC+8
+  // --- Jeddah timezone helpers ---
+  // The database always stores UTC. Jeddah has a fixed UTC+3
   // offset (no daylight saving), so we can safely convert both ways
   // without needing a full timezone library.
 
-  const toManilaInputValue = (iso: string) => {
+  const toJeddahInputValue = (iso: string) => {
     const d = new Date(iso);
     const fmt = new Intl.DateTimeFormat('en-CA', {
-      timeZone: 'Asia/Manila',
+      timeZone: 'Asia/Riyadh',
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
       hour: '2-digit',
       minute: '2-digit',
-      hour12: false,
+      hourCycle: 'h23',
     });
     const parts = fmt.formatToParts(d).reduce((acc: any, p) => {
       acc[p.type] = p.value;
@@ -450,15 +450,15 @@ export default function SuperAdminDashboard() {
     return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`;
   };
 
-  const manilaInputValueToUTCISO = (value: string) => {
-    // value looks like "2026-07-03T08:09" (a PH wall-clock time)
-    return new Date(`${value}:00+08:00`).toISOString();
+  const jeddahInputValueToUTCISO = (value: string) => {
+    // value looks like "2026-07-03T08:09" (a Jeddah wall-clock time)
+    return new Date(`${value}:00+03:00`).toISOString();
   };
 
-  const toManilaDateString = (iso: string) =>
-    new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila' }).format(new Date(iso));
+  const toJeddahDateString = (iso: string) =>
+    new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Riyadh' }).format(new Date(iso));
 
-  const todayManila = toManilaDateString(new Date().toISOString());
+  const todayJeddah = toJeddahDateString(new Date().toISOString());
 
   const filteredAttendanceLogs = attendanceLogs.filter((log) => {
     const matchesSearch = log.profiles?.full_name
@@ -500,8 +500,8 @@ export default function SuperAdminDashboard() {
     setEditingLog({
       id: log.id,
       employeeName: log.profiles?.full_name ?? 'Unknown',
-      timeInLocal: log.time_in ? toManilaInputValue(log.time_in) : '',
-      timeOutLocal: log.time_out ? toManilaInputValue(log.time_out) : '',
+      timeInLocal: log.time_in ? toJeddahInputValue(log.time_in) : '',
+      timeOutLocal: log.time_out ? toJeddahInputValue(log.time_out) : '',
       status: log.status ?? 'Present',
     });
   };
@@ -655,12 +655,12 @@ export default function SuperAdminDashboard() {
     setLogSaving(true);
 
     try {
-      const newTimeInISO = manilaInputValueToUTCISO(editingLog.timeInLocal);
-      // Keep log_date consistent with the corrected time_in (in PH time)
+      const newTimeInISO = jeddahInputValueToUTCISO(editingLog.timeInLocal);
+      // Keep log_date consistent with the corrected time_in (in Jeddah time)
       const newLogDate = editingLog.timeInLocal.split('T')[0];
       // time_out is optional -- only convert it if the admin filled it in.
       const newTimeOutISO = editingLog.timeOutLocal
-        ? manilaInputValueToUTCISO(editingLog.timeOutLocal)
+        ? jeddahInputValueToUTCISO(editingLog.timeOutLocal)
         : null;
 
       const { data: updatedRows, error } = await supabase
@@ -1146,7 +1146,7 @@ export default function SuperAdminDashboard() {
         />
         <div className="grid gap-4 xl:grid-cols-[1.3fr_0.7fr]">
           <button type="button" onClick={openHealthModal} className="rounded-[24px] border border-slate-200 bg-white p-4 text-left shadow-[0_8px_24px_rgba(15,23,42,0.06)] dark:border-slate-700 dark:bg-[#202521]"><div className="flex items-center justify-between gap-3"><div><div className="flex items-center gap-2"><p className="text-base font-semibold text-slate-950 dark:text-white">System Health</p><span className={`rounded-full px-2 py-0.5 text-[9px] font-black ${healthStatusLoading ? 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:!text-white' : lastBackupAt && lastArchiveAt ? 'bg-green-100 text-green-800 dark:bg-green-950 dark:!text-white' : 'bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-200'}`}>{healthStatusLoading ? 'CHECKING' : lastBackupAt && lastArchiveAt ? 'HEALTHY' : 'ATTENTION'}</span></div><p className="mt-0.5 text-xs text-slate-500 dark:!text-[#aab8ad]">Backup, archive, and email delivery</p></div><span className="grid h-10 w-10 place-items-center rounded-xl bg-green-50 text-green-700 dark:bg-green-950/50 dark:text-green-300"><Activity size={18}/></span></div><div className="mt-3 grid grid-cols-2 gap-2"><div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800"><p className="text-[10px] font-bold text-slate-500 dark:!text-[#aab8ad]">Last backup</p><p className="mt-1 text-xs font-bold text-slate-950 dark:text-white">{healthStatusLoading ? 'Checking…' : formatHealthTimestamp(lastBackupAt)}</p></div><div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800"><p className="text-[10px] font-bold text-slate-500 dark:!text-[#aab8ad]">Last archive</p><p className="mt-1 text-xs font-bold text-slate-950 dark:text-white">{healthStatusLoading ? 'Checking…' : formatHealthTimestamp(lastArchiveAt)}</p></div></div></button>
-          <section className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.06)] dark:border-slate-700 dark:bg-[#202521]"><div className="flex items-center justify-between gap-3"><div><p className="text-base font-semibold text-slate-950 dark:text-white">Recent Admin Activity</p><p className="mt-0.5 text-xs text-slate-500 dark:!text-[#aab8ad]">Latest security and configuration events</p></div><Clock3 size={18} className="text-green-700 dark:text-green-300"/></div><div className="mt-3 space-y-1.5">{recentAuditLogs.length ? recentAuditLogs.map((log) => <div key={log.id} className="flex items-start gap-2 rounded-xl bg-slate-50 p-2.5 dark:bg-slate-800"><span className="mt-1 h-2 w-2 flex-none rounded-full bg-green-500"/><span className="min-w-0"><span className="block truncate text-[11px] font-bold text-slate-900 dark:text-white">{auditActionMeta(log.action).label}</span><span className="block truncate text-[9px] text-slate-500 dark:!text-[#aab8ad]">{new Date(log.created_at).toLocaleString('en-US', { timeZone: 'Asia/Manila', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span></span></div>) : <p className="rounded-xl bg-slate-50 p-3 text-[10px] text-slate-500 dark:bg-slate-800 dark:!text-[#aab8ad]">No recent administrative activity.</p>}</div><button type="button" onClick={openAuditLogModal} className="mt-2 min-h-11 w-full text-xs font-bold text-green-700 dark:text-green-300">View Audit Log →</button></section>
+          <section className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.06)] dark:border-slate-700 dark:bg-[#202521]"><div className="flex items-center justify-between gap-3"><div><p className="text-base font-semibold text-slate-950 dark:text-white">Recent Admin Activity</p><p className="mt-0.5 text-xs text-slate-500 dark:!text-[#aab8ad]">Latest security and configuration events</p></div><Clock3 size={18} className="text-green-700 dark:text-green-300"/></div><div className="mt-3 space-y-1.5">{recentAuditLogs.length ? recentAuditLogs.map((log) => <div key={log.id} className="flex items-start gap-2 rounded-xl bg-slate-50 p-2.5 dark:bg-slate-800"><span className="mt-1 h-2 w-2 flex-none rounded-full bg-green-500"/><span className="min-w-0"><span className="block truncate text-[11px] font-bold text-slate-900 dark:text-white">{auditActionMeta(log.action).label}</span><span className="block truncate text-[9px] text-slate-500 dark:!text-[#aab8ad]">{new Date(log.created_at).toLocaleString('en-US', { timeZone: 'Asia/Riyadh', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span></span></div>) : <p className="rounded-xl bg-slate-50 p-3 text-[10px] text-slate-500 dark:bg-slate-800 dark:!text-[#aab8ad]">No recent administrative activity.</p>}</div><button type="button" onClick={openAuditLogModal} className="mt-2 min-h-11 w-full text-xs font-bold text-green-700 dark:text-green-300">View Audit Log →</button></section>
         </div>
       </div>
 
@@ -1159,7 +1159,7 @@ export default function SuperAdminDashboard() {
 
       {userAccountsModalOpen && <UserAccountsModal open={userAccountsModalOpen} onClose={() => setUserAccountsModalOpen(false)} pageSize={directoryPageSize} employees={employees} employeesLoading={employeesLoading} employeesPage={employeesPage} employeesTotalPages={employeesTotalPages} initials={initials} paginatedEmployees={paginatedEmployees} roleTagClass={roleTagClass} setEmployeesPage={setEmployeesPage} startEdit={startEdit} totalAccounts={totalAccounts} />}
 
-      {attendanceRecordsModalOpen && <AttendanceRecordsModal open={attendanceRecordsModalOpen} onClose={() => setAttendanceRecordsModalOpen(false)} pageSize={attendancePageSize} attendanceDateFilter={attendanceDateFilter} attendanceLoading={attendanceLoading} attendancePage={attendancePage} attendanceSearch={attendanceSearch} attendanceTotalPages={attendanceTotalPages} filteredAttendanceLogs={filteredAttendanceLogs} handleAttendanceDateChange={handleAttendanceDateChange} handleAttendanceSearchChange={handleAttendanceSearchChange} paginatedAttendanceLogs={paginatedAttendanceLogs} setAttendancePage={setAttendancePage} startEditLog={startEditLog} statusTagClass={statusTagClass} todayManila={todayManila} />}
+      {attendanceRecordsModalOpen && <AttendanceRecordsModal open={attendanceRecordsModalOpen} onClose={() => setAttendanceRecordsModalOpen(false)} pageSize={attendancePageSize} attendanceDateFilter={attendanceDateFilter} attendanceLoading={attendanceLoading} attendancePage={attendancePage} attendanceSearch={attendanceSearch} attendanceTotalPages={attendanceTotalPages} filteredAttendanceLogs={filteredAttendanceLogs} handleAttendanceDateChange={handleAttendanceDateChange} handleAttendanceSearchChange={handleAttendanceSearchChange} paginatedAttendanceLogs={paginatedAttendanceLogs} setAttendancePage={setAttendancePage} startEditLog={startEditLog} statusTagClass={statusTagClass} todayJeddah={todayJeddah} />}
 
       {appSettingsModalOpen && <AppSettingsModal open={appSettingsModalOpen} onClose={() => setAppSettingsModalOpen(false)} appSettings={appSettings} savedAppSettings={savedAppSettings} appSettingsLoading={appSettingsLoading} appSettingsMsg={appSettingsMsg} appSettingsSaving={appSettingsSaving} saveAppSettings={saveAppSettings} setAppSettings={setAppSettings} />}
 
