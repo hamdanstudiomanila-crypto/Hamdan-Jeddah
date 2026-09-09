@@ -1,5 +1,5 @@
 export const WORK_TIME_ZONE = 'Asia/Riyadh';
-export const WORK_SCHEDULE_EFFECTIVE_DATE = '2026-09-08';
+export const WORK_SCHEDULE_EFFECTIVE_DATE = '2026-09-01';
 export const WORK_START_HOUR = 8;
 export const WORK_END_HOUR = 18;
 

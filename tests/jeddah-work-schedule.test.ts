@@ -4,7 +4,7 @@ import { countChargeableLeaveDays } from '@/lib/leave-rules';
 import { isScheduledWorkday, workDate } from '@/lib/work-schedule';
 import { periodDates } from '@/lib/employee/ask-ai';
 
-describe('Jeddah work schedule effective September 8, 2026', () => {
+describe('Jeddah work schedule effective September 1, 2026', () => {
   it('counts Sunday through Thursday and excludes both rest days', () => {
     expect(countChargeableLeaveDays('2026-09-13', '2026-09-19')).toBe(5);
     expect(countChargeableLeaveDays('2026-09-11', '2026-09-12')).toBe(0);
@@ -12,8 +12,10 @@ describe('Jeddah work schedule effective September 8, 2026', () => {
     expect(countChargeableLeaveDays('2026-09-13', '2026-09-17', ['2026-09-14'])).toBe(4);
   });
   it('preserves the historical workweek across the effective date', () => {
-    expect(isScheduledWorkday('2026-09-04')).toBe(true);
-    expect(isScheduledWorkday('2026-09-06')).toBe(false);
+    expect(isScheduledWorkday('2026-08-28')).toBe(true);
+    expect(isScheduledWorkday('2026-08-30')).toBe(false);
+    expect(isScheduledWorkday('2026-09-04')).toBe(false);
+    expect(isScheduledWorkday('2026-09-06')).toBe(true);
     expect(countChargeableLeaveDays('2026-09-04', '2026-09-13')).toBe(6);
   });
   it('uses the Jeddah day at the UTC midnight boundary', () => {
@@ -32,8 +34,8 @@ describe('Jeddah work schedule effective September 8, 2026', () => {
     expect(attendanceTiming('2026-09-12T09:00:00Z', 8, 0).status).toBe('Present');
   });
   it('preserves the historical cutoff and rejects invalid leave ranges', () => {
-    expect(attendanceTiming('2026-09-07T06:15:30Z', 8, 0).status).toBe('Present');
-    expect(attendanceTiming('2026-09-07T06:16:00Z', 8, 0).status).toBe('Late');
+    expect(attendanceTiming('2026-08-31T06:15:30Z', 8, 0).status).toBe('Present');
+    expect(attendanceTiming('2026-08-31T06:16:00Z', 8, 0).status).toBe('Late');
     expect(countChargeableLeaveDays('', '')).toBe(0);
     expect(countChargeableLeaveDays('2026-09-14', '2026-09-13')).toBe(0);
   });
