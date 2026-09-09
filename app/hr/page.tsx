@@ -1568,13 +1568,15 @@ export default function HRDashboard() {
         body: JSON.stringify({ payslip_id: payslipId }),
       });
       const result = await res.json();
-      if (!res.ok) throw new Error(result.error || 'Failed to publish payslip.');
+      if (!res.ok || result.published !== true) throw new Error(result.error || 'Failed to publish payslip.');
 
       setPublishMsg({
-        type: 'success',
+        type: result.emailTriggered ? 'success' : 'error',
         text: result.emailTriggered
-          ? 'Published! Email is being sent now.'
-          : 'Published, but the instant email trigger failed -- it will still go out within 10 minutes via the automatic check.',
+          ? 'Published. The email workflow received the request.'
+          : result.emailTriggerError === 'not_configured'
+            ? 'Published, but automatic email is not configured. Contact an administrator.'
+            : 'Published, but the email workflow could not be reached or rejected the request. Email delivery is not confirmed. Contact an administrator.',
       });
       await fetchEmployeePayslips(employeeId);
     } catch (err: any) {

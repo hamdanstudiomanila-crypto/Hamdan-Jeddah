@@ -19,3 +19,29 @@ The root `auto send payslip in email.json` uses a ten-minute schedule rather tha
 Configure every database-reading or backup workflow with the Jeddah database credentials and intended recipients. Keep the Manila workflows and paths separate. Set Jeddah schedules to the `Asia/Riyadh` timezone.
 
 App environment configuration does not publish n8n workflows. Workflow activation and real notification/backup delivery still need verification in n8n.
+
+## Publish troubleshooting
+
+If the portal reports publication but the card remains unpublished, check the
+database write before debugging email. The original endpoint accepted an UPDATE
+that affected zero rows. The endpoint now requires a returned row with
+`published: true` and returns an error without calling n8n if the write fails.
+
+The baseline policies include SELECT, INSERT, and DELETE for payslips but omit
+UPDATE. Apply `supabase/migrations/20260909063525_payslip_admin_publish_policy.sql`
+to the Jeddah project after confirming its policy state. It permits UPDATE only
+for authenticated users whose stored profile role is `admin` or `super_admin`.
+Do not bypass RLS with a service-role client to fix publication.
+
+For the deployed portal, configure `N8N_PUBLISH_PAYSLIP_WEBHOOK_URL` and
+`N8N_PUBLISH_WEBHOOK_SECRET` in the Jeddah Vercel project's Production environment.
+The URL must use `/webhook/publish-payslip-jeddah`; the secret must match the
+Jeddah workflow's `Valid Secret?` check. `.env.local` does not configure Vercel.
+Redeploy after changing production environment variables or application code.
+
+Validate a single intended publication: the database row becomes published,
+the new n8n execution starts at `Publish Webhook`, the item passes `Is Published?`,
+and email succeeds before `Mark Emailed`. A successful ten-minute scheduled
+execution does not verify the webhook. A webhook HTTP 200 acknowledges the
+request, not email delivery. In `Send Payslip Email`, use **On Error: Stop Workflow**
+so failed emails do not get recorded as sent.

@@ -4,8 +4,7 @@ import { cookies } from 'next/headers';
 
 // The n8n workflow is exposed through an ngrok tunnel, which rotates its URL
 // whenever the local ngrok process restarts. Set N8N_PUBLISH_PAYSLIP_WEBHOOK_URL
-// in Vercel's project environment variables so updating it doesn't require a
-// redeploy.
+// in the app environment. Restart locally or redeploy on Vercel after changes.
 //
 // SECURITY: no hardcoded fallback here anymore. This repo is public, and a
 // hardcoded secret/URL in a public repo is effectively a public secret. Both
@@ -77,14 +76,27 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Only HR/admins can publish payslips.' }, { status: 403 });
   }
 
-  const { error: updateError } = await supabase
+  const { data: publishedPayslip, error: updateError } = await supabase
     .from('payslips')
     .update({ published: true, published_at: new Date().toISOString() })
-    .eq('id', payslip_id);
+    .eq('id', payslip_id)
+    .select('id, published')
+    .maybeSingle();
 
   if (updateError) {
     console.error('Error marking payslip published:', updateError);
     return NextResponse.json({ error: updateError.message }, { status: 500 });
+  }
+
+  // RLS can hide every matching row without returning an update error.
+  // Never claim publication or trigger email unless the write is confirmed.
+  if (!publishedPayslip || publishedPayslip.published !== true) {
+    console.error('Payslip publish updated no row. Check the payslip ID and admin UPDATE policy.');
+    return NextResponse.json({
+      published: false,
+      emailTriggered: false,
+      error: 'Payslip was not published. The record was not found or your account cannot update it. Ask an administrator to check payslip permissions.',
+    }, { status: 409 });
   }
 
   // Fire the n8n webhook so the email goes out immediately. If this call
@@ -94,7 +106,7 @@ export async function POST(request: Request) {
   // as a fallback, just not instantly.
   if (!N8N_WEBHOOK_URL || !N8N_WEBHOOK_SECRET) {
     console.error('N8N_PUBLISH_PAYSLIP_WEBHOOK_URL or N8N_PUBLISH_WEBHOOK_SECRET is not configured.');
-    return NextResponse.json({ published: true, emailTriggered: false });
+    return NextResponse.json({ published: true, emailTriggered: false, emailTriggerError: 'not_configured' });
   }
 
   try {
@@ -110,15 +122,16 @@ export async function POST(request: Request) {
         'x-publish-secret': N8N_WEBHOOK_SECRET,
       },
       body: JSON.stringify({ payslip_id }),
+      signal: AbortSignal.timeout(15_000),
     });
 
     if (!webhookRes.ok) {
       console.error('n8n publish webhook returned non-OK status:', webhookRes.status);
-      return NextResponse.json({ published: true, emailTriggered: false });
+      return NextResponse.json({ published: true, emailTriggered: false, emailTriggerError: 'webhook_rejected', webhookStatus: webhookRes.status });
     }
   } catch (err) {
-    console.error('Error calling n8n publish webhook:', err);
-    return NextResponse.json({ published: true, emailTriggered: false });
+    console.error('Error calling n8n publish webhook:', err instanceof Error ? err.name : 'UnknownError');
+    return NextResponse.json({ published: true, emailTriggered: false, emailTriggerError: 'webhook_unreachable' });
   }
 
   return NextResponse.json({ published: true, emailTriggered: true });
