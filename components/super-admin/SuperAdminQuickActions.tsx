@@ -1,3 +1,4 @@
+import { T } from '@/components/language/LanguageProvider';
 import { Activity, ClipboardList, DatabaseBackup, KeyRound, ScrollText, Settings, UserPlus, Users } from 'lucide-react';
 
 type Props = {
@@ -26,8 +27,8 @@ export default function SuperAdminQuickActions(props: Props) {
   return (
     <section aria-labelledby="super-admin-quick-actions-title">
       <div className="mb-3">
-        <h2 id="super-admin-quick-actions-title" className="text-base font-semibold text-slate-950 dark:text-white sm:text-lg">Admin Quick Actions</h2>
-        <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-300">Account, workforce, and system controls</p>
+        <h2 id="super-admin-quick-actions-title" className="text-base font-semibold text-slate-950 dark:text-white sm:text-lg"><T>{"Admin Quick Actions"}</T></h2>
+        <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-300"><T>{"Account, workforce, and system controls"}</T></p>
       </div>
       <div className="grid grid-cols-4 gap-2 sm:gap-3">
         {actions.map(({ label, icon: Icon, action, system }) => (
@@ -36,7 +37,7 @@ export default function SuperAdminQuickActions(props: Props) {
               <span className="absolute inset-[3px] rounded-[13px] border border-white/25" aria-hidden="true" />
               <Icon aria-hidden="true" size={20} strokeWidth={2.2} />
             </span>
-            <span className="relative w-full text-balance text-[10px] font-bold leading-tight text-slate-800 dark:text-slate-100 sm:text-xs">{label}</span>
+            <span className="relative w-full text-balance text-[10px] font-bold leading-tight text-slate-800 dark:text-slate-100 sm:text-xs"><T>{label}</T></span>
             <span className={`absolute inset-x-4 bottom-0 h-0.5 rounded-t-full ${system ? 'bg-slate-500' : 'bg-green-600'}`} aria-hidden="true" />
           </button>
         ))}

@@ -55,13 +55,26 @@ export async function downloadOwnedPdf(client: SupabaseClient, path: string) {
 }
 type Context = { history?: ChatTurn[]; client: SupabaseClient; userId: string; fullName: string; question: string; language: string; payslipId?: string; payslipUnlocked?: boolean; requestId: string };
 export async function answerEmployeeQuestion(ctx: Context, call = workflowCall) {
+  const resolved = resolveLanguageFollowUp(ctx.question, ctx.language, ctx.history ?? []);
+  const result = await answerEmployeeQuestionCore(ctx, call);
+  if (resolved.language !== 'ar' || !result.answer) return result;
+  const translated = await call(process.env.N8N_EMPLOYEE_AI_CLASSIFIER_URL, {
+    operation: 'translate_answer', answer: result.answer, language: 'ar', request_id: ctx.requestId,
+  });
+  if (!isRecord(translated) || translated.success !== true || translated.request_id !== ctx.requestId || typeof translated.answer !== 'string' || !translated.answer.trim() || translated.answer.length > 16000) {
+    throw new EmployeeAIError('تعذر تجهيز الرد بالعربية. حاول مرة أخرى.', 503);
+  }
+  return { ...result, answer: translated.answer };
+}
+
+async function answerEmployeeQuestionCore(ctx: Context, call = workflowCall) {
   const { client, userId, payslipId, requestId } = ctx;
   const { question, language, history, missingTopic } = resolveLanguageFollowUp(ctx.question, ctx.language, ctx.history ?? []);
-  if (missingTopic) return { answer: language === 'en' ? 'Sure, I can answer in English. What would you like help with?' : 'Sige, sasagot ako sa Tagalog. Ano ang gusto mong malaman?' };
+  if (missingTopic) return { answer: language !== 'tl' ? 'Sure, I can answer in English. What would you like help with?' : 'Sige, sasagot ako sa Tagalog. Ano ang gusto mong malaman?' };
   const raw = await call(process.env.N8N_EMPLOYEE_AI_CLASSIFIER_URL, { question, history, current_date: periodDates('today').today, language, request_id: requestId });
   let c: Classification;
   try { c = validateClassification(raw); } catch { throw new EmployeeAIError('I could not safely understand that question. Please rephrase.', 422); }
-  const tl = language === 'tl' || (language !== 'en' && c.language === 'tl');
+  const tl = language === 'tl' || (language === 'auto' && c.language === 'tl');
   if (c.intent === 'restricted_other_employee') return { answer: tl ? 'Sorry, hindi puwedeng ibahagi ang private information ng ibang employee.' : 'Sorry, we cannot share another employee’s private information.' };
   if (c.intent === 'how_to') {
     const entry = SYSTEM_KNOWLEDGE[c.metric as SystemKnowledgeMetric];

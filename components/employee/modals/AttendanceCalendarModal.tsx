@@ -1,4 +1,6 @@
 'use client';
+import { T, useLanguage } from '@/components/language/LanguageProvider';
+
 
 import { isScheduledWorkday } from '@/lib/work-schedule';
 import ModalShell from '@/components/shared/ModalShell';
@@ -17,8 +19,9 @@ type Props = {
 };
 
 export default function AttendanceCalendarModal({ open, onClose, month, onMonthChange, availableMonths, formatMonth, days, selectedDate, onSelectDate, selectedDay }: Props) {
+  const { t: localize } = useLanguage();
   return (
-    <ModalShell open={open} onClose={onClose} title="Attendance Calendar" description="Monthly attendance overview" icon="🗓️" size="lg">
+    <ModalShell open={open} onClose={onClose} title={localize("Attendance Calendar")} description={localize("Monthly attendance overview")} icon="🗓️" size="lg">
       <select value={month} onChange={(event) => onMonthChange(event.target.value)} className="input-field mb-4 min-h-11 !py-2 !text-xs">
         {availableMonths.map((value) => <option key={value} value={value}>{formatMonth(value)}</option>)}
       </select>
@@ -41,7 +44,7 @@ export default function AttendanceCalendarModal({ open, onClose, month, onMonthC
                     ? 'bg-green-50 border-green-200 text-green-800 dark:bg-green-950/50 dark:border-green-800 dark:text-green-200'
                     : 'bg-slate-50 border-slate-200 text-slate-500 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300';
           return (
-            <button type="button" key={cell.date} onClick={() => onSelectDate(cell.date)} aria-label={`${cell.date}: ${cell.holiday || cell.log?.status || (!isScheduledWorkday(cell.date) ? 'Rest day' : '') || (!isScheduledWorkday(cell.date) ? 'Rest day' : 'No record')}`} className={`min-h-14 rounded-xl border p-1.5 text-left transition hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 sm:min-h-[66px] ${selectedDate === cell.date ? 'ring-2 ring-blue-400' : ''} ${color}`}>
+            <button type="button" key={cell.date} onClick={() => onSelectDate(cell.date)} aria-label={`${cell.date}: ${cell.holiday || cell.log?.status || (!isScheduledWorkday(cell.date) ? 'Rest day' : '') || (!isScheduledWorkday(cell.date) ? 'Rest day' : 'No record')}`} className={`min-h-14 rounded-xl border p-1.5 text-start transition hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 sm:min-h-[66px] ${selectedDate === cell.date ? 'ring-2 ring-blue-400' : ''} ${color}`}>
               <p className="text-[10px] font-extrabold">{cell.day}</p>
               <p className="mt-1 line-clamp-2 text-[8px] font-bold leading-tight">{cell.holiday || cell.log?.status || (!isScheduledWorkday(cell.date) ? 'Rest day' : '') || '—'}</p>
               {cell.log?.time_in && <p className="mt-1 hidden text-[8px] sm:block">{new Date(cell.log.time_in).toLocaleTimeString('en-US', { timeZone: 'Asia/Riyadh', hour: 'numeric', minute: '2-digit' })}</p>}
@@ -55,15 +58,15 @@ export default function AttendanceCalendarModal({ open, onClose, month, onMonthC
           {selectedDay.holiday && <p className="mt-1 text-[10px] font-bold text-purple-700 dark:text-purple-300">{selectedDay.holiday}</p>}
           {selectedDay.log ? (
             <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-slate-600 dark:text-slate-300">
-              <span><strong>Status:</strong> {selectedDay.log.status}</span>
-              <span><strong>Time In:</strong> {selectedDay.log.time_in ? new Date(selectedDay.log.time_in).toLocaleTimeString('en-US', { timeZone: 'Asia/Riyadh', hour: 'numeric', minute: '2-digit' }) : '—'}</span>
-              <span><strong>Time Out:</strong> {selectedDay.log.time_out ? new Date(selectedDay.log.time_out).toLocaleTimeString('en-US', { timeZone: 'Asia/Riyadh', hour: 'numeric', minute: '2-digit' }) : '—'}</span>
+              <span><strong><T>{"Status:"}</T></strong> {selectedDay.log.status}</span>
+              <span><strong><T>{"Time In:"}</T></strong> {selectedDay.log.time_in ? new Date(selectedDay.log.time_in).toLocaleTimeString('en-US', { timeZone: 'Asia/Riyadh', hour: 'numeric', minute: '2-digit' }) : '—'}</span>
+              <span><strong><T>{"Time Out:"}</T></strong> {selectedDay.log.time_out ? new Date(selectedDay.log.time_out).toLocaleTimeString('en-US', { timeZone: 'Asia/Riyadh', hour: 'numeric', minute: '2-digit' }) : '—'}</span>
             </div>
-          ) : <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-300">{!isScheduledWorkday(selectedDay.date) ? 'Rest day: attendance is not required.' : selectedDay.holiday ? 'Company holiday: attendance is not required.' : 'No attendance record for this date.'}</p>}
+          ) : <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-300"><T>{!isScheduledWorkday(selectedDay.date) ? 'Rest day: attendance is not required.' : selectedDay.holiday ? 'Company holiday: attendance is not required.' : 'No attendance record for this date.'}</T></p>}
         </div>
       )}
-      <div className="mt-4 flex flex-wrap gap-3 text-[9px] font-bold" aria-label="Calendar legend">
-        <span className="text-green-700 dark:text-green-300">● Present</span><span className="text-orange-700 dark:text-orange-300">● Late</span><span className="text-red-700 dark:text-red-300">● Absent</span><span className="text-blue-700 dark:text-blue-300">● Leave</span><span className="text-purple-700 dark:text-purple-300">● Holiday</span>
+      <div className="mt-4 flex flex-wrap gap-3 text-[9px] font-bold" aria-label={localize("Calendar legend")}>
+        <span className="text-green-700 dark:text-green-300"><T>{"● Present"}</T></span><span className="text-orange-700 dark:text-orange-300"><T>{"● Late"}</T></span><span className="text-red-700 dark:text-red-300"><T>{"● Absent"}</T></span><span className="text-blue-700 dark:text-blue-300"><T>{"● Leave"}</T></span><span className="text-purple-700 dark:text-purple-300"><T>{"● Holiday"}</T></span>
       </div>
     </ModalShell>
   );

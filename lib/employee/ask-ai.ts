@@ -13,7 +13,7 @@ export const intentMetrics = {
   restricted_other_employee: ['none'], help: ['none'], unsupported: ['none'],
 } as const;
 export type Intent = keyof typeof intentMetrics;
-export type Classification = { intent: Intent; metric: string; period: 'today' | 'current_month' | 'current_year' | 'previous_month' | 'previous_year' | 'yesterday' | 'custom' | 'all_time' | 'selected_payslip'; target_scope: 'self' | 'other' | 'none'; target_name: string; language: 'tl' | 'en'; date_start?: string; date_end?: string; resolved_question?: string };
+export type Classification = { intent: Intent; metric: string; period: 'today' | 'current_month' | 'current_year' | 'previous_month' | 'previous_year' | 'yesterday' | 'custom' | 'all_time' | 'selected_payslip'; target_scope: 'self' | 'other' | 'none'; target_name: string; language: 'tl' | 'en' | 'ar'; date_start?: string; date_end?: string; resolved_question?: string };
 export const isRecord = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
 export type ChatTurn = { role: 'user' | 'assistant'; content: string };
 export function validateHistory(value: unknown): ChatTurn[] {
@@ -31,14 +31,14 @@ export function validateClassification(v: unknown): Classification {
   else if (v.date_start !== undefined || v.date_end !== undefined) throw new Error('Unexpected dates');
   const intent = v.intent as Intent;
   if (!(intentMetrics[intent] as readonly unknown[]).includes(v.metric) || !['today', 'current_month', 'current_year', 'previous_month', 'previous_year', 'yesterday', 'custom', 'all_time', 'selected_payslip'].includes(String(v.period)) ||
-    !['tl', 'en'].includes(String(v.language)) || typeof v.target_name !== 'string' || !['self', 'other', 'none'].includes(String(v.target_scope))) throw new Error('Invalid classification');
+    !['tl', 'en', 'ar'].includes(String(v.language)) || typeof v.target_name !== 'string' || !['self', 'other', 'none'].includes(String(v.target_scope))) throw new Error('Invalid classification');
   if (intent.startsWith('own_') && (v.target_scope !== 'self' || v.target_name !== '')) throw new Error('Invalid owner scope');
   if (intent === 'how_to' && (v.target_scope !== 'none' || v.target_name !== '')) throw new Error('Invalid how_to scope');
   if ((intent === 'own_payslip') !== (v.period === 'selected_payslip')) throw new Error('Invalid period');
   if (v.period === 'all_time' && !(intent === 'own_attendance' && v.metric === 'last_absent_date')) throw new Error('Invalid period');
   if (intent === 'directory_by_designation' && (v.target_scope !== 'other' || !/^[\p{L}\p{M}][\p{L}\p{M}\p{N} ()/'&.-]{1,79}$/u.test(v.target_name))) throw new Error('Invalid designation lookup');
   if (intent === 'directory_lookup' && (v.target_scope !== 'other' || !/^[\p{L}\p{M} .'-]{2,80}$/u.test(v.target_name))) throw new Error('Invalid directory lookup');
-  return { ...(v.period === 'custom' ? { date_start: v.date_start as string, date_end: v.date_end as string } : {}), intent, metric: v.metric as string, period: v.period as Classification['period'], target_scope: v.target_scope as Classification['target_scope'], target_name: v.target_name, language: v.language as 'tl' | 'en', ...(typeof v.resolved_question === 'string' ? { resolved_question: v.resolved_question } : {}) };
+  return { ...(v.period === 'custom' ? { date_start: v.date_start as string, date_end: v.date_end as string } : {}), intent, metric: v.metric as string, period: v.period as Classification['period'], target_scope: v.target_scope as Classification['target_scope'], target_name: v.target_name, language: v.language as 'tl' | 'en' | 'ar', ...(typeof v.resolved_question === 'string' ? { resolved_question: v.resolved_question } : {}) };
 }
 export function periodDates(period: string, now = new Date()) {
   const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Riyadh', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);

@@ -1,4 +1,6 @@
 'use client';
+import { T, useLanguage } from '@/components/language/LanguageProvider';
+
 
 import { isScheduledWorkday, isWorkingDate, workDate, WORK_SCHEDULE_EFFECTIVE_DATE } from '@/lib/work-schedule';
 import { countChargeableLeaveDays } from '@/lib/leave-rules';
@@ -70,6 +72,7 @@ const FALLBACK_LEAVE_CREDITS = 10;
 const FALLBACK_TIME_OUT_REMINDER_HOUR = 18;
 
 export default function EmployeeDashboard() {
+  const { t: localize } = useLanguage();
   const { verify, verificationDialog } = useVerificationDialog();
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -279,7 +282,7 @@ export default function EmployeeDashboard() {
   // current cutoff period so employees land on "this cutoff" instead of
   // their entire history.
   const [monthFilter, setMonthFilter] = useState(() => {
-    const now = new Date();
+    const now = new Date(`${workDate()}T12:00:00`);
     const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     const half = now.getDate() <= 15 ? 'H1' : 'H2';
     return `${ym}:${half}`;
@@ -587,7 +590,7 @@ export default function EmployeeDashboard() {
     // UTC could see the wrong "today" near midnight.
     const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Riyadh' }).format(new Date());
 
-    const year = new Date().getFullYear();
+    const year = Number(workDate().slice(0, 4));
     const [profileRes, govIdRes, historyRes, leavesCountRes, disputesCountRes, payslipsCountRes, supportCountRes, leaveCreditsRes] = await Promise.all([
       supabase.from('profiles').select('full_name, employee_id, designation, role, avatar_url').eq('id', user.id).single(),
       supabase.from('employee_government_ids').select('hired_date, employment_status').eq('user_id', user.id).maybeSingle(),
@@ -1016,6 +1019,7 @@ export default function EmployeeDashboard() {
   // buttons on the dashboard.
   const [leaveChoiceModalOpen, setLeaveChoiceModalOpen] = useState(false);
   const [leaveForm, setLeaveForm] = useState({ leave_type: 'Sick', start_date: '', end_date: '', reason: '' });
+  const [leaveAttachment, setLeaveAttachment] = useState<File | null>(null);
   const [leaveSaving, setLeaveSaving] = useState(false);
   const [leaveMsg, setLeaveMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [leaveResultToast, setLeaveResultToast] = useState<{ status: string; leave_type: string } | null>(null);
@@ -1043,7 +1047,7 @@ export default function EmployeeDashboard() {
 
   const fetchLeaveCredits = async () => {
     if (!currentUserId) return;
-    const year = new Date().getFullYear();
+    const year = Number(workDate().slice(0, 4));
     const { data } = await supabase
       .from('leave_credits')
       .select('total_credits, used_credits')
@@ -1054,6 +1058,14 @@ export default function EmployeeDashboard() {
   };
 
   const submitLeave = async () => {
+    if (leaveForm.leave_type === 'Sick' && !leaveAttachment) {
+      setLeaveMsg({ type: 'error', text: 'Sick leave requires a supporting document (PDF, JPG, or PNG, up to 10 MB).' });
+      return;
+    }
+    if (leaveAttachment && (!['application/pdf', 'image/jpeg', 'image/png'].includes(leaveAttachment.type) || leaveAttachment.size > 10 * 1024 * 1024 || leaveAttachment.size === 0)) {
+      setLeaveMsg({ type: 'error', text: 'Choose a non-empty PDF, JPG, or PNG up to 10 MB.' });
+      return;
+    }
     if (!leaveForm.start_date || !leaveForm.end_date) {
       setLeaveMsg({ type: 'error', text: 'Please fill in the start and end date.' });
       return;
@@ -1084,14 +1096,26 @@ export default function EmployeeDashboard() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('You are not logged in.');
+      let attachmentPath: string | null = null;
+      if (leaveAttachment) {
+        attachmentPath = `${user.id}/${crypto.randomUUID()}/${leaveAttachment.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+        const { error: uploadError } = await supabase.storage.from('leave-support').upload(attachmentPath, leaveAttachment);
+        if (uploadError) throw uploadError;
+      }
       const { error } = await supabase.from('leave_requests').insert([{
+        attachment_path: attachmentPath,
+        attachment_name: leaveAttachment?.name ?? null,
         user_id: user.id,
         leave_type: leaveForm.leave_type,
         start_date: leaveForm.start_date,
         end_date: leaveForm.end_date,
         reason: leaveForm.reason.trim() || null,
       }]);
-      if (error) throw error;
+      if (error) {
+        if (attachmentPath) await supabase.storage.from('leave-support').remove([attachmentPath]);
+        throw error;
+      }
+      setLeaveAttachment(null);
       setLeaveMsg({ type: 'success', text: 'Leave request submitted! HR will review it soon.' });
       await fetchMyLeaves();
       setTimeout(() => setLeaveModalOpen(false), 1200);
@@ -1117,12 +1141,13 @@ export default function EmployeeDashboard() {
     if (!await verify({ title: 'Cancel leave request?', description: 'The pending request will be removed from HR review.', confirmLabel: 'Cancel request', tone: 'warning', details: ['You can submit a new request later if needed.'] })) return;
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { alert('You are not logged in.'); return; }
-    const { error } = await supabase
+    const { data: cancelled, error } = await supabase
       .from('leave_requests')
       .delete()
       .eq('id', leaveId)
       .eq('user_id', user.id)
-      .eq('status', 'Pending');
+      .eq('status', 'Pending').select('id');
+    if (!error && !cancelled?.length) { alert('This request is no longer pending. Refreshing your requests.'); await fetchMyLeaves(); return; }
     if (error) { alert('Failed to cancel: ' + error.message); return; }
     await fetchMyLeaves();
   };
@@ -1187,7 +1212,7 @@ export default function EmployeeDashboard() {
     if (!await verify({ title: 'Cancel attendance dispute?', description: 'The pending dispute will be removed from HR review.', confirmLabel: 'Cancel dispute', tone: 'warning', details: ['Your original attendance record will remain unchanged.'] })) return;
     setCancelingDisputeId(disputeId);
     try {
-      const { error } = await supabase.rpc('cancel_my_attendance_dispute', { p_dispute_id: disputeId });
+      const { error } = await supabase.rpc('cancel_pending_attendance_dispute', { p_dispute_id: disputeId });
       if (error) throw error;
       setMyDisputes((current) => current.filter((dispute) => dispute.id !== disputeId));
       setSelectedMyDisputeDetail(null);
@@ -1434,7 +1459,7 @@ export default function EmployeeDashboard() {
   const renderPhoneNumber = () => (
     <div>
       <label className="block">
-        <span className="label-branded mb-1 block">Phone Number</span>
+        <span className="label-branded mb-1 block"><T>{"Phone Number"}</T></span>
         <input type="tel" autoComplete="tel" maxLength={25} value={phoneNumber}
           onChange={(event) => { setPhoneNumber(event.target.value); setPhoneMessage(''); }}
           disabled={initLoading || phoneSaving} placeholder="+966 5X XXX XXXX"
@@ -1442,7 +1467,7 @@ export default function EmployeeDashboard() {
       </label>
       <button type="button" onClick={savePhoneNumber} disabled={initLoading || phoneSaving || phoneNumber.trim() === savedPhoneNumber}
         className="mt-2 rounded-lg bg-green-700 px-3 py-2 text-xs font-bold text-white disabled:opacity-50">
-        {phoneSaving ? 'Saving?' : 'Save Phone Number'}
+        <T>{phoneSaving ? 'Saving?' : 'Save Phone Number'}</T>
       </button>
       {phoneMessage && <p role="status" className="mt-1 text-xs text-slate-600 dark:text-slate-300">{phoneMessage}</p>}
     </div>
@@ -1469,20 +1494,16 @@ export default function EmployeeDashboard() {
     return half === 'H1' ? day <= 15 : day >= 16;
   };
 
-  const currentCutoffKey = useMemo(() => {
-    const now = new Date();
-    const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-    const half = now.getDate() <= 15 ? 'H1' : 'H2';
-    return `${ym}:${half}`;
-  }, []);
-
   // Today's date in Jeddah -- used to decide whether a "no time out"
   // row is eligible for a missed-time-out dispute (only past days;
   // today's row already has its own Time Out button/reminder).
-  const todayJeddah = useMemo(
-    () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Riyadh' }).format(new Date()),
-    []
-  );
+  const [todayJeddah, setTodayJeddah] = useState(() => workDate());
+  useEffect(() => {
+    const timer = window.setInterval(() => setTodayJeddah(workDate()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const currentCutoffKey = `${todayJeddah.slice(0, 7)}:${Number(todayJeddah.slice(8)) <= 15 ? 'H1' : 'H2'}`;
 
   const upcomingApprovedLeaves = myLeaves
     .filter((leave) => leave.status === 'Approved' && leave.end_date >= todayJeddah)
@@ -1957,7 +1978,7 @@ export default function EmployeeDashboard() {
   };
 
   if (seasonalSettings.maintenance_mode === true) {
-    return <main className="grid min-h-screen place-items-center bg-slate-100 p-5 dark:bg-slate-950"><section className="w-full max-w-md rounded-[28px] border border-amber-200 bg-white p-7 text-center shadow-2xl dark:border-amber-900 dark:bg-slate-900"><span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-amber-100 text-2xl dark:bg-amber-950">🛠️</span><p className="mt-5 text-[10px] font-black uppercase tracking-[0.18em] text-amber-700 dark:text-amber-300">Scheduled maintenance</p><h1 className="mt-2 text-2xl font-black text-slate-950 dark:text-white">Employee portal is temporarily unavailable</h1><p className="mt-3 text-sm leading-relaxed text-slate-600 dark:text-slate-300">{String(seasonalSettings.maintenance_message || 'Scheduled maintenance is in progress. Please try again shortly.')}</p><button type="button" onClick={handleLogout} className="mt-6 min-h-11 rounded-xl border border-slate-300 px-5 text-xs font-bold text-slate-700 dark:border-slate-600 dark:text-white">Sign out</button></section></main>;
+    return <main className="grid min-h-screen place-items-center bg-slate-100 p-5 dark:bg-slate-950"><section className="w-full max-w-md rounded-[28px] border border-amber-200 bg-white p-7 text-center shadow-2xl dark:border-amber-900 dark:bg-slate-900"><span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-amber-100 text-2xl dark:bg-amber-950">🛠️</span><p className="mt-5 text-[10px] font-black uppercase tracking-[0.18em] text-amber-700 dark:text-amber-300"><T>{"Scheduled maintenance"}</T></p><h1 className="mt-2 text-2xl font-black text-slate-950 dark:text-white"><T>{"Employee portal is temporarily unavailable"}</T></h1><p className="mt-3 text-sm leading-relaxed text-slate-600 dark:text-slate-300">{String(seasonalSettings.maintenance_message || 'Scheduled maintenance is in progress. Please try again shortly.')}</p><button type="button" onClick={handleLogout} className="mt-6 min-h-11 rounded-xl border border-slate-300 px-5 text-xs font-bold text-slate-700 dark:border-slate-600 dark:text-white"><T>{"Sign out"}</T></button></section></main>;
   }
 
   return (
@@ -2149,7 +2170,7 @@ export default function EmployeeDashboard() {
         {/* Header */}
         <header className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_4px_18px_rgba(15,23,42,0.04)] dark:bg-[#292f2b] sm:p-4">
           <div className="min-w-0">
-            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#16a34a] lg:hidden">Hamdan Studio</p>
+            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#16a34a] lg:hidden"><T>{"Hamdan Studio"}</T></p>
             <h1 className="mt-0.5 truncate text-xl font-bold leading-tight sm:text-2xl">{profile?.full_name || 'Employee'}</h1>
             <p className="mt-1 truncate text-xs font-semibold uppercase tracking-wide text-slate-500">{profile?.designation || 'Employee'}</p>
           </div>
@@ -2158,24 +2179,24 @@ export default function EmployeeDashboard() {
               type="button"
               onClick={toggleTheme}
               className="grid h-11 w-11 place-items-center rounded-full border border-slate-200 text-slate-500 transition-colors duration-150 hover:bg-slate-50 lg:hidden"
-              aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+              aria-label={localize(darkMode ? 'Switch to light mode' : 'Switch to dark mode')}
             >
               {darkMode ? <SunIcon /> : <MoonIcon />}
             </button>
             <button type="button" onClick={() => setNotificationsModalOpen(true)} className="relative grid h-11 w-11 place-items-center rounded-full border border-slate-200 text-slate-600 transition hover:bg-slate-50" aria-label={`Notifications${unreadNotificationCount ? `, ${unreadNotificationCount} unread` : ''}`}>
               <Bell size={19} strokeWidth={2} />
-              {unreadNotificationCount > 0 && <span className="absolute -right-0.5 -top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-red-500 px-1 text-[9px] font-bold leading-none text-white">{unreadNotificationCount > 9 ? '9+' : unreadNotificationCount}</span>}
+              {unreadNotificationCount > 0 && <span className="absolute -end-0.5 -top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-red-500 px-1 text-[9px] font-bold leading-none text-white">{unreadNotificationCount > 9 ? '9+' : unreadNotificationCount}</span>}
             </button>
-            <button type="button" onClick={() => setMobileToolsOpen(true)} className="grid h-11 w-11 place-items-center overflow-hidden rounded-full border border-slate-200 bg-slate-50 text-slate-500 lg:hidden" aria-label="Open employee menu">
+            <button type="button" onClick={() => setMobileToolsOpen(true)} className="grid h-11 w-11 place-items-center overflow-hidden rounded-full border border-slate-200 bg-slate-50 text-slate-500 lg:hidden" aria-label={localize("Open employee menu")}>
               {profile?.avatar_url ? <Image src={profile.avatar_url} alt="" width={44} height={44} className="h-full w-full object-cover" /> : <UserRound size={19} />}
             </button>
-            <button type="button" onClick={openProfileFromNav} className="hidden h-11 w-11 place-items-center overflow-hidden rounded-full border border-slate-200 bg-slate-50 text-slate-500 lg:grid" aria-label="Open employee profile">
+            <button type="button" onClick={openProfileFromNav} className="hidden h-11 w-11 place-items-center overflow-hidden rounded-full border border-slate-200 bg-slate-50 text-slate-500 lg:grid" aria-label={localize("Open employee profile")}>
               {profile?.avatar_url ? <Image src={profile.avatar_url} alt="" width={44} height={44} className="h-full w-full object-cover" /> : <UserRound size={19} />}
             </button>
           </div>
         </header>
 
-        {seasonalTheme.active && seasonalTheme.bannerEnabled && dismissedSeasonalBanner !== seasonalTheme.variant ? <section className={`relative overflow-hidden rounded-2xl border border-amber-300/50 bg-gradient-to-r px-4 py-3 text-white shadow-lg ${seasonalPresentation.bannerTone}`} aria-label="Seasonal greeting"><span className="absolute -right-3 -top-5 text-6xl text-white/10" aria-hidden="true">{seasonalPresentation.symbol}</span><div className="flex items-center gap-3"><span className="grid h-9 w-9 flex-none place-items-center rounded-xl bg-white/15 text-lg ring-1 ring-white/20" aria-hidden="true">{seasonalPresentation.symbol}</span><div className="min-w-0 flex-1"><p className="text-[9px] font-black uppercase tracking-[0.18em] text-amber-200">{seasonalPresentation.label}</p><p className="truncate text-sm font-bold">{seasonalPresentation.greeting}</p></div><button type="button" onClick={() => setDismissedSeasonalBanner(seasonalTheme.variant)} className="grid h-9 w-9 flex-none place-items-center rounded-full bg-white/10 text-lg text-white/80 transition hover:bg-white/20" aria-label="Dismiss seasonal greeting">×</button></div></section> : null}
+        {seasonalTheme.active && seasonalTheme.bannerEnabled && dismissedSeasonalBanner !== seasonalTheme.variant ? <section className={`relative overflow-hidden rounded-2xl border border-amber-300/50 bg-gradient-to-r px-4 py-3 text-white shadow-lg ${seasonalPresentation.bannerTone}`} aria-label={localize("Seasonal greeting")}><span className="absolute -end-3 -top-5 text-6xl text-white/10" aria-hidden="true">{seasonalPresentation.symbol}</span><div className="flex items-center gap-3"><span className="grid h-9 w-9 flex-none place-items-center rounded-xl bg-white/15 text-lg ring-1 ring-white/20" aria-hidden="true">{seasonalPresentation.symbol}</span><div className="min-w-0 flex-1"><p className="text-[9px] font-black uppercase tracking-[0.18em] text-amber-200">{seasonalPresentation.label}</p><p className="truncate text-sm font-bold">{seasonalPresentation.greeting}</p></div><button type="button" onClick={() => setDismissedSeasonalBanner(seasonalTheme.variant)} className="grid h-9 w-9 flex-none place-items-center rounded-full bg-white/10 text-lg text-white/80 transition hover:bg-white/20" aria-label={localize("Dismiss seasonal greeting")}>×</button></div></section> : null}
 
         {message && <div className={`p-3 rounded-xl text-xs font-bold ${message.startsWith('Error') ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}`}>{message}</div>}
 
@@ -2183,9 +2204,9 @@ export default function EmployeeDashboard() {
 
         {/* Mobile summary cards -- tap any of these to see which dates were counted. */}
         <div className="grid grid-cols-3 gap-2 sm:gap-3">
-          <EmployeeSummaryCard label="Present" value={summary.present} icon={CheckCircle2} tone="green" onClick={() => setSummaryDetailType('present')} />
-          <EmployeeSummaryCard label="Late" value={summary.late} icon={Clock3} tone="orange" detail={`${formatLateDuration(summary.totalLateMinutes)} total`} onClick={() => setSummaryDetailType('late')} />
-          <EmployeeSummaryCard label="Absent" value={summary.absent} icon={CalendarX2} tone="red" onClick={() => setSummaryDetailType('absent')} />
+          <EmployeeSummaryCard label={localize("Present")} value={summary.present} icon={CheckCircle2} tone="green" onClick={() => setSummaryDetailType('present')} />
+          <EmployeeSummaryCard label={localize("Late")} value={summary.late} icon={Clock3} tone="orange" detail={`${formatLateDuration(summary.totalLateMinutes)} total`} onClick={() => setSummaryDetailType('late')} />
+          <EmployeeSummaryCard label={localize("Absent")} value={summary.absent} icon={CalendarX2} tone="red" onClick={() => setSummaryDetailType('absent')} />
         </div>
 
         {/* Main layout */}
@@ -2214,18 +2235,18 @@ export default function EmployeeDashboard() {
             <div className="card-style lg:sticky lg:top-6 !p-4">
               <div className="flex items-center gap-3 lg:flex-col lg:text-center lg:gap-0">
                 <div className="w-14 h-14 lg:w-20 lg:h-20 lg:mx-auto lg:mb-3 rounded-full bg-slate-100 flex items-center justify-center overflow-hidden border border-slate-200 flex-shrink-0">
-                  {profile?.avatar_url ? <Image src={profile.avatar_url} alt="Profile" width={80} height={80} className="object-cover w-full h-full"/> : <div className="text-slate-400 font-bold text-xs">Logo</div>}
+                  {profile?.avatar_url ? <Image src={profile.avatar_url} alt="Profile" width={80} height={80} className="object-cover w-full h-full"/> : <div className="text-slate-400 font-bold text-xs"><T>{"Logo"}</T></div>}
                 </div>
                 <div className="flex-1 min-w-0 lg:w-full">
                   <h2 className="text-sm lg:text-base font-semibold text-slate-900 truncate lg:text-center">
-                    {initLoading ? <span className="text-slate-400">Loading...</span> : (profile?.full_name || 'Unknown')}
+                    {initLoading ? <span className="text-slate-400"><T>{"Loading..."}</T></span> : (profile?.full_name || 'Unknown')}
                   </h2>
                   <p className="text-blue-600 font-medium text-xs truncate lg:text-center">{profile?.designation || '---'}</p>
-                  <p className="text-slate-400 text-[10px] lg:hidden">ID: {profile?.employee_id || '---'}</p>
+                  <p className="text-slate-400 text-[10px] lg:hidden"><T>{"ID: "}</T>{profile?.employee_id || '---'}</p>
                 </div>
               </div>
-              <div className="hidden lg:block text-left border-t border-slate-100 pt-3 mt-3">
-                <p className="label-branded">Employee ID</p>
+              <div className="hidden lg:block text-start border-t border-slate-100 pt-3 mt-3">
+                <p className="label-branded"><T>{"Employee ID"}</T></p>
                 <p className="font-medium text-slate-700 text-sm">{profile?.employee_id || '---'}</p>
               </div>
 
@@ -2236,7 +2257,7 @@ export default function EmployeeDashboard() {
                   <div className="flex items-center gap-2.5 bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-100 rounded-2xl p-3">
                     <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center flex-shrink-0 text-lg shadow-sm">🔥</div>
                     <div className="min-w-0">
-                      <p className="font-extrabold text-slate-900 text-sm leading-none">{attendanceStreak}-day streak</p>
+                      <p className="font-extrabold text-slate-900 text-sm leading-none">{attendanceStreak}<T>{"-day streak"}</T></p>
                       <p className="text-orange-600 text-[10px] font-bold uppercase tracking-wide mt-1">{streakMessage}</p>
                     </div>
                   </div>
@@ -2246,7 +2267,7 @@ export default function EmployeeDashboard() {
               {!initLoading && (
                 <div className="mt-3">
                   <div className="flex items-center justify-between gap-2 mb-1.5">
-                    <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wide">Profile completeness</p>
+                    <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wide"><T>{"Profile completeness"}</T></p>
                     <p className="text-slate-700 text-[10px] font-extrabold">{profileCompleteness.percent}%</p>
                   </div>
                   <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
@@ -2255,18 +2276,18 @@ export default function EmployeeDashboard() {
                 </div>
               )}
 
-              <button type="button" onClick={() => setShowGovIdsSection((s) => !s)} className="mt-3 text-blue-600 text-xs font-bold hover:underline w-full text-left lg:text-center">
-                {showGovIdsSection ? 'Hide Details' : 'See More Details'}
+              <button type="button" onClick={() => setShowGovIdsSection((s) => !s)} className="mt-3 text-blue-600 text-xs font-bold hover:underline w-full text-start lg:text-center">
+                <T>{showGovIdsSection ? 'Hide Details' : 'See More Details'}</T>
               </button>
               {showGovIdsSection && (
                 <div className="mt-3 pt-3 border-t border-slate-100 space-y-3">
                   {renderPhoneNumber()}
-                  <div><p className="label-branded mb-1">Hired Date</p><p className="font-medium text-slate-700 text-sm">{governmentIds?.hired_date ? formatHiredDate(governmentIds.hired_date) : 'Not set'}</p></div>
+                  <div><p className="label-branded mb-1"><T>{"Hired Date"}</T></p><p className="font-medium text-slate-700 text-sm"><T>{governmentIds?.hired_date ? formatHiredDate(governmentIds.hired_date) : 'Not set'}</T></p></div>
                   <div>
-                    <p className="label-branded mb-1">Employment Status</p>
+                    <p className="label-branded mb-1"><T>{"Employment Status"}</T></p>
                     {governmentIds?.employment_status ? (
                       <span className={governmentIds.employment_status === 'Regular' ? 'tag-present' : governmentIds.employment_status === 'Probationary' ? 'tag-late' : 'tag-excused'}>{governmentIds.employment_status}</span>
-                    ) : <p className="font-medium text-slate-700 text-sm">Not set</p>}
+                    ) : <p className="font-medium text-slate-700 text-sm"><T>{"Not set"}</T></p>}
                   </div>
                 </div>
               )}
@@ -2277,41 +2298,40 @@ export default function EmployeeDashboard() {
           <div className="space-y-4 lg:col-span-3 md:space-y-5">
 
             {/* Clock + Time buttons */}
-            {!attendanceRecordingEnabled ? <div role="status" className="rounded-2xl border border-red-200 bg-red-50 p-3 text-xs font-bold text-red-800 dark:border-red-900 dark:bg-red-950/30 dark:!text-white">Attendance recording is temporarily unavailable.</div> : null}
+            {!attendanceRecordingEnabled ? <div role="status" className="rounded-2xl border border-red-200 bg-red-50 p-3 text-xs font-bold text-red-800 dark:border-red-900 dark:bg-red-950/30 dark:!text-white"><T>{"Attendance recording is temporarily unavailable."}</T></div> : null}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <EmployeeWorkClock todayLog={todayLog} holidays={companyHolidays.map(h => h.holiday_date)} startHour={Number(seasonalSettings.work_start_hour)} startMinute={Number(seasonalSettings.work_start_minute)} endHour={workEndHour} endMinute={workEndMinute} />
               <div className="flex flex-col justify-center gap-2 sm:min-h-40">
                 {!todayLog ? (
                   <button onClick={handleTimeIn} disabled={!attendanceRecordingEnabled || loading || initLoading || checkingNetwork || officeNetworkAllowed === false} className="btn-primary !py-3">
-                    {loading ? <span className="flex items-center justify-center gap-2"><Spinner size="sm"/>Processing...</span> : checkingNetwork ? <span className="flex items-center justify-center gap-2"><Spinner size="sm"/>Checking...</span> : officeNetworkAllowed === false ? (officeNetworkIssue === 'unavailable' ? 'Attendance Unavailable' : 'Not on Office Network') : 'Time In'}
+                    <T>{loading ? <span className="flex items-center justify-center gap-2"><Spinner size="sm"/><T>{"Processing..."}</T></span> : checkingNetwork ? <span className="flex items-center justify-center gap-2"><Spinner size="sm"/><T>{"Checking..."}</T></span> : officeNetworkAllowed === false ? (officeNetworkIssue === 'unavailable' ? 'Attendance Unavailable' : 'Not on Office Network') : 'Time In'}</T>
                   </button>
                 ) : !todayLog.time_out ? (
                   <button onClick={handleTimeOutClick} disabled={!attendanceRecordingEnabled || timeOutLoading || checkingNetwork || officeNetworkAllowed === false} className="btn-danger !py-3">
-                    {timeOutLoading ? <span className="flex items-center justify-center gap-2"><Spinner size="sm"/>Processing...</span> : checkingNetwork ? <span className="flex items-center justify-center gap-2"><Spinner size="sm"/>Checking...</span> : officeNetworkAllowed === false ? (officeNetworkIssue === 'unavailable' ? 'Attendance Unavailable' : 'Not on Office Network') : 'Time Out'}
+                    <T>{timeOutLoading ? <span className="flex items-center justify-center gap-2"><Spinner size="sm"/><T>{"Processing..."}</T></span> : checkingNetwork ? <span className="flex items-center justify-center gap-2"><Spinner size="sm"/><T>{"Checking..."}</T></span> : officeNetworkAllowed === false ? (officeNetworkIssue === 'unavailable' ? 'Attendance Unavailable' : 'Not on Office Network') : 'Time Out'}</T>
                   </button>
                 ) : (
-                  <button disabled className="btn-primary !py-3 opacity-50 cursor-not-allowed">Completed for Today</button>
+                  <button disabled className="btn-primary !py-3 opacity-50 cursor-not-allowed"><T>{"Completed for Today"}</T></button>
                 )}
                 <div className="flex min-h-6 flex-col justify-center">
                 {todayLog?.time_in && (
-                  <p className="text-center text-slate-400 text-xs">
-                    In: {new Date(todayLog.time_in).toLocaleTimeString('en-US', { timeZone: 'Asia/Riyadh', hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                    {todayLog.time_out && <> · Out: {new Date(todayLog.time_out).toLocaleTimeString('en-US', { timeZone: 'Asia/Riyadh', hour: '2-digit', minute: '2-digit', second: '2-digit' })}</>}
+                  <p className="text-center text-slate-400 text-xs"><T>{" In: "}</T>{new Date(todayLog.time_in).toLocaleTimeString('en-US', { timeZone: 'Asia/Riyadh', hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                    {todayLog.time_out && <><T>{" · Out: "}</T>{new Date(todayLog.time_out).toLocaleTimeString('en-US', { timeZone: 'Asia/Riyadh', hour: '2-digit', minute: '2-digit', second: '2-digit' })}</>}
                   </p>
                 )}
                 {!checkingNetwork && officeNetworkAllowed === false && !(todayLog?.time_out) && (
                   <div className={`flex items-start justify-between gap-3 rounded-xl border p-3 ${officeNetworkIssue === 'unavailable' ? 'bg-red-50 border-red-100' : 'bg-orange-50 border-orange-100'}`}>
                     <div className="min-w-0">
                       <p className={`text-xs font-bold ${officeNetworkIssue === 'unavailable' ? 'text-red-700' : 'text-orange-700'}`}>
-                        {officeNetworkIssue === 'unavailable' ? 'Attendance recording is temporarily unavailable.' : 'You are not connected to an authorized office network.'}
+                        <T>{officeNetworkIssue === 'unavailable' ? 'Attendance recording is temporarily unavailable.' : 'You are not connected to an authorized office network.'}</T>
                       </p>
                       <p className="text-slate-500 text-[10px] mt-1">
-                        {officeNetworkIssue === 'unavailable'
+                        <T>{officeNetworkIssue === 'unavailable'
                           ? 'Please contact HR or IT. You can still use the rest of the Employee Portal.'
-                          : 'Time In and Time Out are available only through the office network. Other portal features remain available.'}
+                          : 'Time In and Time Out are available only through the office network. Other portal features remain available.'}</T>
                       </p>
                     </div>
-                    <button onClick={checkOfficeNetwork} className="text-blue-600 text-xs font-bold hover:underline flex-shrink-0">Retry</button>
+                    <button onClick={checkOfficeNetwork} className="text-blue-600 text-xs font-bold hover:underline flex-shrink-0"><T>{"Retry"}</T></button>
                   </div>
                 )}
                 </div>
@@ -2324,7 +2344,7 @@ export default function EmployeeDashboard() {
                 doesn't shove everything below it down -- this was a measurable
                 contributor to this page's Cumulative Layout Shift score. */}
             {announcementLoading ? (
-              <div className="card-style !p-4 min-h-[120px] flex items-center"><LoadingRow label="Loading announcement..." /></div>
+              <div className="card-style !p-4 min-h-[120px] flex items-center"><LoadingRow label={localize("Loading announcement...")} /></div>
             ) : announcementError ? (
               <div className="card-style flex min-h-[120px] items-center !p-4 border border-red-100"><p className="text-red-500 text-sm">{announcementError}</p></div>
             ) : announcement ? (
@@ -2332,7 +2352,7 @@ export default function EmployeeDashboard() {
                 <div className="flex items-start gap-3">
                   <div className="flex-shrink-0 w-8 h-8 rounded-xl bg-green-500 flex items-center justify-center text-sm">📣</div>
                   <div className="flex-1 min-w-0">
-                    <span className="mb-2 inline-block rounded-full bg-green-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-slate-950">Announcement</span>
+                    <span className="mb-2 inline-block rounded-full bg-green-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-slate-950"><T>{"Announcement"}</T></span>
                     <p className="text-white text-sm font-medium whitespace-pre-wrap leading-relaxed">{announcement}</p>
                     {announcementImageUrl && (
                       // Fixed aspect-ratio wrapper reserves the image's box before
@@ -2347,13 +2367,13 @@ export default function EmployeeDashboard() {
                         />
                       </div>
                     )}
-                    {announcementUpdatedAt && <p className="text-green-100/70 text-[10px] font-medium uppercase tracking-widest mt-2">Updated: {announcementUpdatedAt}</p>}
+                    {announcementUpdatedAt && <p className="text-green-100/70 text-[10px] font-medium uppercase tracking-widest mt-2"><T>{"Updated: "}</T>{announcementUpdatedAt}</p>}
                   </div>
                 </div>
               </div>
             ) : (
               <div className="card-style flex min-h-[120px] items-center justify-center !p-3 border-2 border-dashed border-slate-200 text-center">
-                <p className="text-slate-400 text-xs">No announcements right now.</p>
+                <p className="text-slate-400 text-xs"><T>{"No announcements right now."}</T></p>
               </div>
             )}
 
@@ -2375,11 +2395,9 @@ export default function EmployeeDashboard() {
               <button
                 type="button"
                 onClick={() => setAttendanceHistoryOpen((v) => !v)}
-                className="flex-1 flex items-center justify-between gap-2 text-left"
+                className="flex-1 flex items-center justify-between gap-2 text-start"
               >
-                <h3 className="mb-0 text-sm">
-                  Attendance History
-                  {!attendanceHistoryOpen && (
+                <h3 className="mb-0 text-sm"><T>{" Attendance History "}</T>{!attendanceHistoryOpen && (
                     <span className="block text-[10px] font-medium text-slate-400 normal-case tracking-normal mt-0.5">
                       {monthFilter ? formatMonthLabel(monthFilter) : `${filteredHistory.length} record${filteredHistory.length === 1 ? '' : 's'}`}
                     </span>
@@ -2396,9 +2414,7 @@ export default function EmployeeDashboard() {
                   type="button"
                   onClick={openAttendanceCalendar}
                   className="px-3 py-2 rounded-full bg-blue-50 text-blue-600 text-[10px] font-bold hover:bg-blue-100 transition flex-shrink-0"
-                >
-                  Calendar
-                </button>
+                ><T>{" Calendar "}</T></button>
               </div>
 
               {attendanceHistoryOpen && (
@@ -2406,7 +2422,7 @@ export default function EmployeeDashboard() {
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2 mt-4 mb-3">
                     <div className="flex flex-wrap items-center gap-2">
                       <select className="input-field !py-1.5 !text-xs !min-h-0 w-auto" value={selectedYm} onChange={(e) => handleMonthChange(e.target.value)}>
-                        <option value="">All months</option>
+                        <option value=""><T>{"All months"}</T></option>
                         {availableMonths.map((ym) => <option key={ym} value={ym}>{formatMonthOnly(ym)}</option>)}
                       </select>
                       {selectedYm && (
@@ -2415,52 +2431,42 @@ export default function EmployeeDashboard() {
                             type="button"
                             onClick={() => handleHalfChange('ALL')}
                             className={`px-3 py-1 rounded-full text-[11px] font-bold transition whitespace-nowrap ${selectedHalf === 'ALL' ? 'bg-white shadow text-slate-900' : 'text-slate-400'}`}
-                          >
-                            Whole Month
-                          </button>
+                          ><T>{" Whole Month "}</T></button>
                           <button
                             type="button"
                             onClick={() => handleHalfChange('H1')}
                             className={`px-3 py-1 rounded-full text-[11px] font-bold transition whitespace-nowrap ${selectedHalf === 'H1' ? 'bg-white shadow text-slate-900' : 'text-slate-400'}`}
-                          >
-                            1st Half
-                          </button>
+                          ><T>{" 1st Half "}</T></button>
                           <button
                             type="button"
                             onClick={() => handleHalfChange('H2')}
                             className={`px-3 py-1 rounded-full text-[11px] font-bold transition whitespace-nowrap ${selectedHalf === 'H2' ? 'bg-white shadow text-slate-900' : 'text-slate-400'}`}
-                          >
-                            2nd Half
-                          </button>
+                          ><T>{" 2nd Half "}</T></button>
                         </div>
                       )}
-                      {monthFilter && <button onClick={() => setMonthFilter('')} className="text-slate-400 text-xs font-bold hover:text-slate-600">Clear</button>}
+                      {monthFilter && <button onClick={() => setMonthFilter('')} className="text-slate-400 text-xs font-bold hover:text-slate-600"><T>{"Clear"}</T></button>}
                     </div>
                   </div>
                   {filteredHistory.length > 0 && (
                     <div className="flex items-center justify-end gap-2 mb-3">
-                      <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wide mr-1">Export:</span>
+                      <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wide me-1"><T>{"Export:"}</T></span>
                       <button
                         type="button"
                         onClick={exportAttendanceCSV}
                         className="inline-flex items-center gap-1 bg-slate-100 text-slate-600 text-[11px] font-bold px-3 py-1.5 rounded-full hover:bg-slate-200 transition"
                       >
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                        CSV
-                      </button>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg><T>{" CSV "}</T></button>
                       <button
                         type="button"
                         onClick={exportAttendancePDF}
                         className="inline-flex items-center gap-1 bg-slate-100 text-slate-600 text-[11px] font-bold px-3 py-1.5 rounded-full hover:bg-slate-200 transition"
                       >
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                        PDF
-                      </button>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg><T>{" PDF "}</T></button>
                     </div>
                   )}
                   <div className="space-y-2">
-                    {initLoading && <LoadingRow label="Loading..." />}
-                    {!initLoading && filteredHistory.length === 0 && <p className="text-slate-400 text-xs">No records{monthFilter ? ' for this selected period' : ''}.</p>}
+                    {initLoading && <LoadingRow label={localize("Loading...")} />}
+                    {!initLoading && filteredHistory.length === 0 && <p className="text-slate-400 text-xs"><T>{"No records"}</T><T>{monthFilter ? ' for this selected period' : ''}</T>.</p>}
                     {filteredHistory.map((log, index) => (
                       <div key={index} className="grid grid-cols-[minmax(0,1fr)_76px_minmax(0,1fr)] items-start gap-2 rounded-xl border border-slate-100 bg-slate-50 p-3">
                         <div className="min-w-0">
@@ -2468,7 +2474,7 @@ export default function EmployeeDashboard() {
                           <div className="text-slate-400 text-[10px]">{log.log_date}</div>
                         </div>
                         <span className={`${statusTagClass(log.status)} inline-flex w-[76px] items-center justify-center justify-self-center whitespace-nowrap`}>{log.status}</span>
-                          <div className="min-w-0 text-right">
+                          <div className="min-w-0 text-end">
                             <div className="whitespace-nowrap font-semibold text-slate-700 text-xs">
                               {log.time_in ? new Date(log.time_in).toLocaleTimeString('en-US', { timeZone: 'Asia/Riyadh', hour: '2-digit', minute: '2-digit' }) : '--:--'}
                               {log.time_out && <> – {new Date(log.time_out).toLocaleTimeString('en-US', { timeZone: 'Asia/Riyadh', hour: '2-digit', minute: '2-digit' })}</>}
@@ -2486,9 +2492,7 @@ export default function EmployeeDashboard() {
                                 if (isPending) {
                                   return (
                                     <span className="inline-flex items-center gap-1 text-orange-600 text-[9px] font-bold uppercase tracking-wide">
-                                      <span className="w-1.5 h-1.5 rounded-full bg-orange-500 flex-shrink-0" />
-                                      Dispute Pending
-                                    </span>
+                                      <span className="w-1.5 h-1.5 rounded-full bg-orange-500 flex-shrink-0" /><T>{" Dispute Pending "}</T></span>
                                   );
                                 }
 
@@ -2498,15 +2502,13 @@ export default function EmployeeDashboard() {
                                       type="button"
                                       onClick={() => openDisputeModal(log.id, log.log_date, canDisputeLate ? 'TimeIn' : 'TimeOut', false)}
                                       className="inline-flex items-center gap-1 bg-blue-50 text-blue-600 text-[9px] font-bold uppercase tracking-wide px-3 py-1 rounded-full hover:bg-blue-100 transition whitespace-nowrap"
-                                    >
-                                      Dispute
-                                    </button>
+                                    ><T>{" Dispute "}</T></button>
                                   );
                                 }
 
                                 // No time-in at all that day -- nothing to dispute yet.
                                 if (!log.time_out && !log.time_in) {
-                                  return <span className="text-slate-400 text-[9px] uppercase tracking-wide">No time out</span>;
+                                  return <span className="text-slate-400 text-[9px] uppercase tracking-wide"><T>{"No time out"}</T></span>;
                                 }
 
                                 return null;
@@ -2569,11 +2571,11 @@ export default function EmployeeDashboard() {
         designation={profile?.designation || 'Employee'}
         avatarUrl={profile?.avatar_url}
         details={<>
-          <div><div className="mb-1.5 flex items-center justify-between gap-2"><p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Profile completeness</p><p className="text-xs font-extrabold text-slate-700">{profileCompleteness.percent}%</p></div><div className="h-2 overflow-hidden rounded-full bg-slate-200"><div className="h-full rounded-full bg-green-600" style={{ width: `${profileCompleteness.percent}%` }} /></div></div>
-          <div><p className="label-branded mb-1">Employee ID</p><p className="text-sm font-medium text-slate-700">{profile?.employee_id || 'Not set'}</p></div>
+          <div><div className="mb-1.5 flex items-center justify-between gap-2"><p className="text-[10px] font-bold uppercase tracking-wide text-slate-500"><T>{"Profile completeness"}</T></p><p className="text-xs font-extrabold text-slate-700">{profileCompleteness.percent}%</p></div><div className="h-2 overflow-hidden rounded-full bg-slate-200"><div className="h-full rounded-full bg-green-600" style={{ width: `${profileCompleteness.percent}%` }} /></div></div>
+          <div><p className="label-branded mb-1"><T>{"Employee ID"}</T></p><p className="text-sm font-medium text-slate-700">{profile?.employee_id || 'Not set'}</p></div>
           {renderPhoneNumber()}
-          <div><p className="label-branded mb-1">Hired Date</p><p className="text-sm font-medium text-slate-700">{governmentIds?.hired_date ? formatHiredDate(governmentIds.hired_date) : 'Not set'}</p></div>
-          <div><p className="label-branded mb-1">Employment Status</p>{governmentIds?.employment_status ? <span className={governmentIds.employment_status === 'Regular' ? 'tag-present' : governmentIds.employment_status === 'Probationary' ? 'tag-late' : 'tag-excused'}>{governmentIds.employment_status}</span> : <p className="text-sm font-medium text-slate-700">Not set</p>}</div>
+          <div><p className="label-branded mb-1"><T>{"Hired Date"}</T></p><p className="text-sm font-medium text-slate-700"><T>{governmentIds?.hired_date ? formatHiredDate(governmentIds.hired_date) : 'Not set'}</T></p></div>
+          <div><p className="label-branded mb-1"><T>{"Employment Status"}</T></p>{governmentIds?.employment_status ? <span className={governmentIds.employment_status === 'Regular' ? 'tag-present' : governmentIds.employment_status === 'Probationary' ? 'tag-late' : 'tag-excused'}>{governmentIds.employment_status}</span> : <p className="text-sm font-medium text-slate-700"><T>{"Not set"}</T></p>}</div>
         </>}
       />}
 
@@ -2598,19 +2600,19 @@ export default function EmployeeDashboard() {
 
       {/* New Announcement Toast (auto-dismisses after 6s) */}
       {showAnnouncementToast && (
-        <div className="fixed top-4 left-4 right-4 sm:left-auto sm:right-6 sm:top-6 sm:max-w-sm z-50">
+        <div className="fixed top-4 start-4 end-4 sm:start-auto sm:end-6 sm:top-6 sm:max-w-sm z-50">
           <div className="rounded-2xl bg-slate-900 text-white p-4 shadow-2xl flex items-start gap-3">
             <div className="flex-shrink-0 w-9 h-9 rounded-xl bg-green-500 flex items-center justify-center text-lg">
               📣
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-white font-semibold text-sm">New announcement posted!</p>
+              <p className="text-white font-semibold text-sm"><T>{"New announcement posted!"}</T></p>
               <p className="text-white/60 text-xs mt-1 line-clamp-2">{announcement}</p>
             </div>
             <button
               onClick={() => setShowAnnouncementToast(false)}
               className="text-white/40 hover:text-white flex-shrink-0"
-              aria-label="Close notification"
+              aria-label={localize("Close notification")}
               type="button"
             >
               ✕
@@ -2623,23 +2625,20 @@ export default function EmployeeDashboard() {
 
       {/* Dispute Result Toast (auto-dismisses after 8s) */}
       {disputeResultToast && (
-        <div className="fixed top-4 left-4 right-4 sm:left-auto sm:right-6 sm:top-24 sm:max-w-sm z-50">
+        <div className="fixed top-4 start-4 end-4 sm:start-auto sm:end-6 sm:top-24 sm:max-w-sm z-50">
           <div className={`rounded-2xl text-white p-4 shadow-2xl flex items-start gap-3 ${disputeResultToast.status === 'Approved' ? 'bg-green-600' : 'bg-rose-600'}`}>
             <div className="flex-shrink-0 w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center text-lg">
               {disputeResultToast.status === 'Approved' ? '✅' : '❌'}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-white font-semibold text-sm">
-                Dispute {disputeResultToast.status === 'Approved' ? 'Approved' : 'Declined'}
+              <p className="text-white font-semibold text-sm"><T>{" Dispute "}</T><T>{disputeResultToast.status === 'Approved' ? 'Approved' : 'Declined'}</T>
               </p>
-              <p className="text-white/80 text-xs mt-1">
-                Your {disputeResultToast.disputeType === 'TimeOut' ? 'time-out' : 'time-in'} dispute for {disputeResultToast.date} was {disputeResultToast.status === 'Approved' ? 'approved' : 'declined'} by HR.
-              </p>
+              <p className="text-white/80 text-xs mt-1"><T>{" Your "}</T><T>{disputeResultToast.disputeType === 'TimeOut' ? 'time-out' : 'time-in'}</T><T>{" dispute for "}</T>{disputeResultToast.date}<T>{" was "}</T><T>{disputeResultToast.status === 'Approved' ? 'approved' : 'declined'}</T><T>{" by HR. "}</T></p>
             </div>
             <button
               onClick={() => setDisputeResultToast(null)}
               className="text-white/60 hover:text-white flex-shrink-0"
-              aria-label="Close notification"
+              aria-label={localize("Close notification")}
               type="button"
             >
               ✕
@@ -2650,34 +2649,32 @@ export default function EmployeeDashboard() {
 
       {/* Configurable Time-Out Reminder (in-page only) */}
       {showTimeOutReminder && (
-        <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 sm:bottom-6 sm:max-w-sm z-50">
+        <div className="fixed bottom-4 start-4 end-4 sm:start-auto sm:end-6 sm:bottom-6 sm:max-w-sm z-50">
           <div className="rounded-2xl bg-slate-900 text-white p-4 shadow-2xl flex items-start gap-3">
             <div className="flex-shrink-0 w-9 h-9 rounded-xl bg-amber-500 flex items-center justify-center text-lg">
               🔔
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-white font-semibold text-sm">Don&apos;t forget to time out!</p>
-              <p className="text-white/60 text-xs mt-1">It&apos;s already past {expectedTimeOutLabel}.</p>
+              <p className="text-white font-semibold text-sm"><T>{"Don't forget to time out!"}</T></p>
+              <p className="text-white/60 text-xs mt-1"><T>{"It's already past "}</T>{expectedTimeOutLabel}.</p>
               <div className="flex gap-2 mt-3">
                 <button
                   onClick={handleTimeOut}
                   disabled={timeOutLoading}
                   className="text-xs font-bold bg-white text-slate-900 px-3 py-1.5 rounded-full hover:bg-white/90 transition disabled:opacity-50"
                 >
-                  {timeOutLoading ? 'Processing...' : 'Time Out Now'}
+                  <T>{timeOutLoading ? 'Processing...' : 'Time Out Now'}</T>
                 </button>
                 <button
                   onClick={dismissReminder}
                   className="text-xs font-bold text-white/60 hover:text-white px-3 py-1.5 transition"
-                >
-                  Dismiss
-                </button>
+                ><T>{" Dismiss "}</T></button>
               </div>
             </div>
             <button
               onClick={dismissReminder}
               className="text-white/40 hover:text-white flex-shrink-0"
-              aria-label="Close reminder"
+              aria-label={localize("Close reminder")}
               type="button"
             >
               ✕
@@ -2707,18 +2704,18 @@ export default function EmployeeDashboard() {
       {/* Company Calendar Modal */}
       {calendarModalOpen && <CompanyCalendarModal open={calendarModalOpen} onClose={() => setCalendarModalOpen(false)} loading={holidaysLoading} holidays={companyHolidays} upcoming={upcomingHolidays} past={pastHolidays} formatDate={formatHolidayDate} daysUntil={daysUntilHoliday} />}
 
-      {leaveModalOpen && <LeaveRequestModal open={leaveModalOpen} onClose={() => setLeaveModalOpen(false)} onBack={() => { setLeaveModalOpen(false); setLeaveChoiceModalOpen(true); }} countLeaveDays={countLeaveDays} countLeaveHolidays={countLeaveHolidays} fallbackLeaveCredits={fallbackLeaveCredits} isRegular={isRegular} leaveCredits={leaveCredits} leaveForm={leaveForm} leaveMsg={leaveMsg} leaveSaving={leaveSaving} remainingCredits={remainingCredits} setLeaveForm={setLeaveForm} submitLeave={submitLeave} todayJeddah={todayJeddah} upcomingApprovedLeaves={upcomingApprovedLeaves} />}
+      {leaveModalOpen && <LeaveRequestModal leaveAttachment={leaveAttachment} setLeaveAttachment={setLeaveAttachment} open={leaveModalOpen} onClose={() => setLeaveModalOpen(false)} onBack={() => { setLeaveModalOpen(false); setLeaveChoiceModalOpen(true); }} countLeaveDays={countLeaveDays} countLeaveHolidays={countLeaveHolidays} fallbackLeaveCredits={fallbackLeaveCredits} isRegular={isRegular} leaveCredits={leaveCredits} leaveForm={leaveForm} leaveMsg={leaveMsg} leaveSaving={leaveSaving} remainingCredits={remainingCredits} setLeaveForm={setLeaveForm} submitLeave={submitLeave} todayJeddah={todayJeddah} upcomingApprovedLeaves={upcomingApprovedLeaves} />}
 
       {/* Leave Result Toast */}
       {leaveResultToast && (
-        <div className="fixed top-4 left-4 right-4 sm:left-auto sm:right-6 sm:top-36 sm:max-w-sm z-50">
+        <div className="fixed top-4 start-4 end-4 sm:start-auto sm:end-6 sm:top-36 sm:max-w-sm z-50">
           <div className={`rounded-2xl text-white p-4 shadow-2xl flex items-start gap-3 ${leaveResultToast.status === 'Approved' ? 'bg-green-600' : 'bg-rose-600'}`}>
             <div className="flex-shrink-0 w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center text-lg">
               {leaveResultToast.status === 'Approved' ? '✅' : '❌'}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-white font-semibold text-sm">Leave {leaveResultToast.status === 'Approved' ? 'Approved' : 'Declined'}</p>
-              <p className="text-white/80 text-xs mt-1">Your {leaveResultToast.leave_type} leave request was {leaveResultToast.status === 'Approved' ? 'approved' : 'declined'} by HR.</p>
+              <p className="text-white font-semibold text-sm"><T>{"Leave "}</T><T>{leaveResultToast.status === 'Approved' ? 'Approved' : 'Declined'}</T></p>
+              <p className="text-white/80 text-xs mt-1"><T>{"Your "}</T>{leaveResultToast.leave_type}<T>{" leave request was "}</T><T>{leaveResultToast.status === 'Approved' ? 'approved' : 'declined'}</T><T>{" by HR."}</T></p>
             </div>
             <button onClick={() => setLeaveResultToast(null)} className="text-white/60 hover:text-white flex-shrink-0" type="button">✕</button>
           </div>

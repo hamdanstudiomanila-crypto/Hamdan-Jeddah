@@ -1,4 +1,6 @@
 'use client';
+import { T, useLanguage } from '@/components/language/LanguageProvider';
+
 
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import Spinner from '@/components/Spinner';
@@ -34,6 +36,7 @@ export default function PlanMyCommuteModal({
   darkMode,
   initialDestination,
 }: PlanMyCommuteModalProps) {
+  const { t: localize } = useLanguage();
   // Manual Weather + Live Traffic route checker.
   const commuteModalRef = useRef<HTMLDivElement>(null);
   const commuteCloseButtonRef = useRef<HTMLButtonElement>(null);
@@ -638,7 +641,7 @@ export default function PlanMyCommuteModal({
           ref={commuteModalRef}
           role="dialog"
           aria-modal="true"
-          aria-label="Plan My Commute: Jeddah"
+          aria-label={localize("Plan My Commute: Jeddah")}
           className={`${darkMode ? 'dark' : ''} commute-theme-scope fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/45 backdrop-blur-sm p-0 sm:p-4`}
           data-theme={darkMode ? 'dark' : 'light'}
         >
@@ -650,11 +653,9 @@ export default function PlanMyCommuteModal({
                 </div>
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="mb-0">Plan My Commute: Jeddah</h3>
+                    <h3 className="mb-0"><T>{"Plan My Commute: Jeddah"}</T></h3>
                   </div>
-                  <p className="text-slate-400 text-xs mt-1">
-                    Weather and traffic advice across your selected route.
-                  </p>
+                  <p className="text-slate-400 text-xs mt-1"><T>{" Weather and traffic advice across your selected route. "}</T></p>
                 </div>
               </div>
               <button
@@ -662,7 +663,7 @@ export default function PlanMyCommuteModal({
                 type="button"
                 onClick={() => onClose()}
                 className="w-11 h-11 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center hover:bg-slate-200 transition flex-shrink-0"
-                aria-label="Close commute assistant"
+                aria-label={localize("Close commute assistant")}
               >
                 ×
               </button>
@@ -675,7 +676,7 @@ export default function PlanMyCommuteModal({
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
                     <p className={`text-[8px] font-extrabold uppercase tracking-wider ${commuteUIState === 'partial' ? 'text-orange-700' : 'text-blue-700 '}`}>
-                      {commuteUIState === 'partial' ? '⚠ Partial data' : '● Live'}
+                      <T>{commuteUIState === 'partial' ? '⚠ Partial data' : '● Live'}</T>
                       {commuteResult ? ` · Updated ${formatCommuteUpdatedAt(commuteResult.freshness?.overall_updated_at || commuteResult.generated_at)}` : ''}
                     </p>
                     <p className="mt-1 truncate text-xs font-black text-slate-900 ">
@@ -683,45 +684,35 @@ export default function PlanMyCommuteModal({
                       {' → '}
                       {selectedDestinationAddress ? getAddressPrimaryLabel(selectedDestinationAddress) : shortCommutePlace(commuteDestination, 'To')}
                     </p>
-                    <p className="mt-1 text-[9px] font-semibold text-slate-500 ">
-                      🕒 Depart {commuteDepartureTime} · {commuteAdviceOptions.length} selected
-                    </p>
+                    <p className="mt-1 text-[9px] font-semibold text-slate-500 "><T>{" 🕒 Depart "}</T>{commuteDepartureTime} · {commuteAdviceOptions.length}<T>{" selected "}</T></p>
                   </div>
                   <button
                     type="button"
                     onClick={() => setIsCommuteFormCollapsed(false)}
                     className="inline-flex min-h-11 min-w-11 flex-shrink-0 items-center justify-center rounded-xl border border-blue-200 bg-white px-3 text-[9px] font-extrabold text-blue-700 shadow-sm transition hover:bg-blue-50   "
-                  >
-                    ✏️ Edit
-                  </button>
+                  ><T>{" ✏️ Edit "}</T></button>
                 </div>
               </div>
             )}
             <section className={`rounded-3xl border border-slate-200 bg-white p-3 sm:p-4 lg:p-5 shadow-sm ${isCommuteFormCollapsed ? 'hidden' : 'block'}`}>
               <div className="flex items-center justify-between gap-3 mb-3">
                 <div>
-                  <p className="text-[9px] uppercase tracking-[0.16em] font-extrabold text-slate-500">
-                    Plan your route
-                  </p>
-                  <p className="text-[10px] text-slate-400 mt-0.5">
-                    Select an exact address for better route accuracy.
-                  </p>
+                  <p className="text-[9px] uppercase tracking-[0.16em] font-extrabold text-slate-500"><T>{" Plan your route "}</T></p>
+                  <p className="text-[10px] text-slate-400 mt-0.5"><T>{" Select an exact address for better route accuracy. "}</T></p>
                 </div>
-                <span title="Address results are limited to Saudi Arabia" className="hidden sm:inline-flex rounded-full bg-white border border-slate-200 px-2.5 py-1 text-[8px] font-extrabold text-slate-500">
-                  SA · Saudi Arabia
-                </span>
+                <span title={localize("Address results are limited to Saudi Arabia")} className="hidden sm:inline-flex rounded-full bg-white border border-slate-200 px-2.5 py-1 text-[8px] font-extrabold text-slate-500"><T>{" SA · Saudi Arabia "}</T></span>
               </div>
             <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
               <div className="relative">
                 <div className="flex items-center justify-between mb-1.5">
-                  <label className="label-branded mb-0">From</label>
-                  <span className="text-[9px] font-bold text-slate-400">Starting point</span>
+                  <label className="label-branded mb-0"><T>{"From"}</T></label>
+                  <span className="text-[9px] font-bold text-slate-400"><T>{"Starting point"}</T></span>
                 </div>
                 <div className="relative">
                   {originLocationResolving ? (
                     <div className="min-h-14 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 flex items-center gap-2.5" role="status" aria-live="polite">
                       <Spinner size="sm" />
-                      <div><p className="text-[10px] font-extrabold text-slate-700">Locating…</p><p className="text-[9px] text-slate-400 mt-0.5">Finding a readable address for your GPS position.</p></div>
+                      <div><p className="text-[10px] font-extrabold text-slate-700"><T>{"Locating…"}</T></p><p className="text-[9px] text-slate-400 mt-0.5"><T>{"Finding a readable address for your GPS position."}</T></p></div>
                     </div>
                   ) : selectedOriginAddress ? (
                     <div className="commute-location-card min-h-14 rounded-xl border border-blue-200 bg-blue-50/70 px-3 py-2.5 flex items-start gap-2.5">
@@ -736,7 +727,7 @@ export default function PlanMyCommuteModal({
                           {getAddressSecondaryLabel(selectedOriginAddress)}
                         </p>
                       </div>
-                      <button type="button" onClick={() => clearCommuteAddress('origin')} className="commute-location-clear w-11 h-11 rounded-xl bg-white border border-blue-200 text-blue-700 hover:bg-blue-100 transition" aria-label="Change starting point">×</button>
+                      <button type="button" onClick={() => clearCommuteAddress('origin')} className="commute-location-clear w-11 h-11 rounded-xl bg-white border border-blue-200 text-blue-700 hover:bg-blue-100 transition" aria-label={localize("Change starting point")}>×</button>
                     </div>
                   ) : (
                   <div className="relative" role="combobox" aria-expanded={showOriginSuggestions} aria-haspopup="listbox" aria-controls="commute-origin-listbox">
@@ -764,25 +755,25 @@ export default function PlanMyCommuteModal({
                         }, 180);
                       }}
                       autoComplete="off"
-                      className="input-field w-full !h-14 !pl-10 !pr-16"
-                      placeholder="Search landmark, street, or district..."
+                      className="input-field w-full !h-14 !ps-10 !pe-16"
+                      placeholder={localize("Search landmark, street, or district...")}
                       aria-autocomplete="list"
                       aria-controls="commute-origin-listbox"
                       aria-activedescendant={originActiveSuggestion >= 0 ? `commute-origin-option-${originActiveSuggestion}` : undefined}
                     />
 
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-700 text-xs pointer-events-none" aria-hidden="true">⌖</span>
+                    <span className="absolute start-3 top-1/2 -translate-y-1/2 text-blue-700 text-xs pointer-events-none" aria-hidden="true">⌖</span>
 
                     {originSearchLoading && (
-                      <div className="absolute right-14 top-1/2 -translate-y-1/2">
+                      <div className="absolute end-14 top-1/2 -translate-y-1/2">
                         <Spinner size="sm" />
                       </div>
                     )}
 
                     {showOriginSuggestions && commuteOrigin.trim().length >= 3 && (
-                      <div id="commute-origin-listbox" role="listbox" className="absolute left-0 right-0 top-full z-[100] mt-1.5 max-h-72 overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-2xl">
+                      <div id="commute-origin-listbox" role="listbox" className="absolute start-0 end-0 top-full z-[100] mt-1.5 max-h-72 overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-2xl">
                         {originSearchLoading && originSuggestions.length === 0 && (
-                          <div className="px-3.5 py-4 flex items-center justify-center gap-2 text-[10px] font-bold text-slate-500"><Spinner size="sm" /> Searching addresses…</div>
+                          <div className="px-3.5 py-4 flex items-center justify-center gap-2 text-[10px] font-bold text-slate-500"><Spinner size="sm" /><T>{" Searching addresses…"}</T></div>
                         )}
                         {originSuggestions.map((place, index) => (
                           <button
@@ -793,7 +784,7 @@ export default function PlanMyCommuteModal({
                             type="button"
                             onMouseDown={(e) => e.preventDefault()}
                             onClick={() => selectAddressSuggestion(place, 'origin')}
-                            className={`w-full px-3.5 py-3 text-left border-b border-slate-100 last:border-b-0 transition ${index === originActiveSuggestion ? 'bg-blue-50' : 'hover:bg-slate-50'}`}
+                            className={`w-full px-3.5 py-3 text-start border-b border-slate-100 last:border-b-0 transition ${index === originActiveSuggestion ? 'bg-blue-50' : 'hover:bg-slate-50'}`}
                           >
                             <div className="flex items-start gap-2.5">
                               <span className="mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-blue-50 text-xs">
@@ -814,11 +805,11 @@ export default function PlanMyCommuteModal({
                         ))}
                         {!originSearchLoading && originSuggestions.length === 0 && (
                           <div className="px-3.5 py-4 text-center">
-                            <p className="text-[10px] font-extrabold text-slate-700">{originSearchError ? 'Address search unavailable' : 'No matching Saudi address found'}</p>
+                            <p className="text-[10px] font-extrabold text-slate-700"><T>{originSearchError ? 'Address search unavailable' : 'No matching Saudi address found'}</T></p>
                             <p className="text-[9px] text-slate-400 mt-1">{originSearchError || 'Try a landmark, street, district, or city name.'}</p>
                           </div>
                         )}
-                        <div className="sticky bottom-0 border-t border-slate-100 bg-slate-50 px-3.5 py-2 text-[8px] font-semibold text-slate-400">Location data: OpenStreetMap</div>
+                        <div className="sticky bottom-0 border-t border-slate-100 bg-slate-50 px-3.5 py-2 text-[8px] font-semibold text-slate-400"><T>{"Location data: OpenStreetMap"}</T></div>
                       </div>
                     )}
                   </div>
@@ -828,9 +819,9 @@ export default function PlanMyCommuteModal({
                     <button
                       type="button"
                       onClick={useCurrentLocationForCommute}
-                      className="absolute bottom-1.5 right-1.5 z-20 flex h-11 w-11 items-center justify-center rounded-xl border border-blue-200 bg-white text-sm font-bold text-blue-700 shadow-sm transition hover:bg-blue-50   "
-                      title="Use my current location"
-                      aria-label="Use my current location"
+                      className="absolute bottom-1.5 end-1.5 z-20 flex h-11 w-11 items-center justify-center rounded-xl border border-blue-200 bg-white text-sm font-bold text-blue-700 shadow-sm transition hover:bg-blue-50   "
+                      title={localize("Use my current location")}
+                      aria-label={localize("Use my current location")}
                     >
                       ◎
                     </button>
@@ -840,8 +831,8 @@ export default function PlanMyCommuteModal({
 
               <div className="relative">
                 <div className="flex items-center justify-between mb-1.5">
-                  <label className="label-branded mb-0">To</label>
-                  <span className="text-[9px] font-bold text-slate-400">Destination</span>
+                  <label className="label-branded mb-0"><T>{"To"}</T></label>
+                  <span className="text-[9px] font-bold text-slate-400"><T>{"Destination"}</T></span>
                 </div>
                 <div className="relative">
                   {selectedDestinationAddress ? (
@@ -866,7 +857,7 @@ export default function PlanMyCommuteModal({
                           {getAddressSecondaryLabel(selectedDestinationAddress)}
                         </p>
                       </div>
-                      <button type="button" onClick={() => clearCommuteAddress('destination')} className="commute-location-clear w-11 h-11 rounded-xl bg-white border border-blue-200 text-blue-700 hover:bg-blue-100 transition" aria-label="Change destination">×</button>
+                      <button type="button" onClick={() => clearCommuteAddress('destination')} className="commute-location-clear w-11 h-11 rounded-xl bg-white border border-blue-200 text-blue-700 hover:bg-blue-100 transition" aria-label={localize("Change destination")}>×</button>
                     </div>
                   ) : (
                   <div className="relative" role="combobox" aria-expanded={showDestinationSuggestions} aria-haspopup="listbox" aria-controls="commute-destination-listbox">
@@ -894,7 +885,7 @@ export default function PlanMyCommuteModal({
                       }, 180);
                     }}
                     autoComplete="off"
-                    className={`input-field w-full !h-14 !pl-10 !pr-10 transition-shadow ${
+                    className={`input-field w-full !h-14 !ps-10 !pe-10 transition-shadow ${
                       commuteResult?.highlight_route_for_rain ||
                       commuteResult?.highlight_destination_for_rain ||
                       commuteResult?.weather?.rain_alert?.active ||
@@ -906,24 +897,24 @@ export default function PlanMyCommuteModal({
                             : '!border-amber-400 ring-2 ring-amber-200/70'
                         : ''
                     }`}
-                    placeholder="Search landmark, street, or district..."
+                    placeholder={localize("Search landmark, street, or district...")}
                     aria-autocomplete="list"
                     aria-controls="commute-destination-listbox"
                     aria-activedescendant={destinationActiveSuggestion >= 0 ? `commute-destination-option-${destinationActiveSuggestion}` : undefined}
                   />
 
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-700 text-xs pointer-events-none" aria-hidden="true">●</span>
+                  <span className="absolute start-3 top-1/2 -translate-y-1/2 text-blue-700 text-xs pointer-events-none" aria-hidden="true">●</span>
 
                   {destinationSearchLoading && (
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <div className="absolute end-3 top-1/2 -translate-y-1/2">
                       <Spinner size="sm" />
                     </div>
                   )}
 
                   {showDestinationSuggestions && commuteDestination.trim().length >= 3 && (
-                    <div id="commute-destination-listbox" role="listbox" className="absolute left-0 right-0 top-full z-[100] mt-1.5 max-h-72 overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-2xl">
+                    <div id="commute-destination-listbox" role="listbox" className="absolute start-0 end-0 top-full z-[100] mt-1.5 max-h-72 overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-2xl">
                       {destinationSearchLoading && destinationSuggestions.length === 0 && (
-                        <div className="px-3.5 py-4 flex items-center justify-center gap-2 text-[10px] font-bold text-slate-500"><Spinner size="sm" /> Searching addresses…</div>
+                        <div className="px-3.5 py-4 flex items-center justify-center gap-2 text-[10px] font-bold text-slate-500"><Spinner size="sm" /><T>{" Searching addresses…"}</T></div>
                       )}
                       {destinationSuggestions.map((place, index) => (
                         <button
@@ -934,7 +925,7 @@ export default function PlanMyCommuteModal({
                           type="button"
                           onMouseDown={(e) => e.preventDefault()}
                           onClick={() => selectAddressSuggestion(place, 'destination')}
-                          className={`w-full px-3.5 py-3 text-left border-b border-slate-100 last:border-b-0 transition ${index === destinationActiveSuggestion ? 'bg-blue-50' : 'hover:bg-slate-50'}`}
+                          className={`w-full px-3.5 py-3 text-start border-b border-slate-100 last:border-b-0 transition ${index === destinationActiveSuggestion ? 'bg-blue-50' : 'hover:bg-slate-50'}`}
                         >
                           <div className="flex items-start gap-2.5">
                             <span className="mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-blue-50 text-xs">
@@ -955,11 +946,11 @@ export default function PlanMyCommuteModal({
                       ))}
                       {!destinationSearchLoading && destinationSuggestions.length === 0 && (
                         <div className="px-3.5 py-4 text-center">
-                          <p className="text-[10px] font-extrabold text-slate-700">{destinationSearchError ? 'Address search unavailable' : 'No matching Saudi address found'}</p>
+                          <p className="text-[10px] font-extrabold text-slate-700"><T>{destinationSearchError ? 'Address search unavailable' : 'No matching Saudi address found'}</T></p>
                           <p className="text-[9px] text-slate-400 mt-1">{destinationSearchError || 'Try a landmark, street, district, or city name.'}</p>
                         </div>
                       )}
-                      <div className="sticky bottom-0 border-t border-slate-100 bg-slate-50 px-3.5 py-2 text-[8px] font-semibold text-slate-400">Location data: OpenStreetMap</div>
+                      <div className="sticky bottom-0 border-t border-slate-100 bg-slate-50 px-3.5 py-2 text-[8px] font-semibold text-slate-400"><T>{"Location data: OpenStreetMap"}</T></div>
                     </div>
                   )}
                   </div>
@@ -983,8 +974,7 @@ export default function PlanMyCommuteModal({
                             : 'bg-amber-50 border-amber-200'
                       }`}>
                         <p className="text-[10px] font-extrabold text-slate-900">
-                          ☔ {Math.round(rainChance)}% rain chance
-                          {routeWettest?.location_name ? ` near ${shortCommutePlace(routeWettest.location_name, 'your route')}` : ' at the destination'}
+                          ☔ {Math.round(rainChance)}<T>{"% rain chance "}</T><T>{routeWettest?.location_name ? ` near ${shortCommutePlace(routeWettest.location_name, 'your route')}` : ' at the destination'}</T>
                         </p>
                         <p className="text-[9px] text-slate-600 mt-0.5">
                           {routeWettest?.rain_intensity_label || commuteResult.weather?.rain_intensity_label || 'Rain possible'}
@@ -1002,7 +992,7 @@ export default function PlanMyCommuteModal({
 
               <div className="grid grid-cols-2 gap-2.5 mt-3">
                 <div>
-                  <label className="label-branded mb-1.5 block">Date</label>
+                  <label className="label-branded mb-1.5 block"><T>{"Date"}</T></label>
                   <input
                     type="date"
                     value={commuteDepartureDate}
@@ -1013,7 +1003,7 @@ export default function PlanMyCommuteModal({
                   />
                 </div>
                 <div>
-                  <label className="label-branded mb-1.5 block">Departure</label>
+                  <label className="label-branded mb-1.5 block"><T>{"Departure"}</T></label>
                   <input
                     type="time"
                     step="1800"
@@ -1025,12 +1015,8 @@ export default function PlanMyCommuteModal({
               </div>
 
               <div className="mt-3 pt-3 border-t border-slate-200/80">
-                <p className="text-[9px] uppercase tracking-[0.16em] font-extrabold text-slate-500">
-                  What do you want to know?
-                </p>
-                <p className="text-[9px] text-slate-400 mt-0.5">
-                  Select only what you need. This keeps the AI request focused and smaller.
-                </p>
+                <p className="text-[9px] uppercase tracking-[0.16em] font-extrabold text-slate-500"><T>{" What do you want to know? "}</T></p>
+                <p className="text-[9px] text-slate-400 mt-0.5"><T>{" Select only what you need. This keeps the AI request focused and smaller. "}</T></p>
                 <div className="grid grid-cols-2 gap-2 mt-2 sm:grid-cols-4">
                   {[
                     {
@@ -1079,7 +1065,7 @@ export default function PlanMyCommuteModal({
                           {selected ? '✓' : icon}
                         </span>
                         <span className="min-w-0">
-                          <span className="block text-[9px] font-extrabold leading-tight">{label}</span>
+                          <span className="block text-[9px] font-extrabold leading-tight"><T>{label}</T></span>
                           <span className="block text-[8px] font-semibold mt-0.5 text-slate-400 leading-tight sm:hidden">
                             {detail}
                           </span>
@@ -1091,9 +1077,9 @@ export default function PlanMyCommuteModal({
                 <div className={`mt-2.5 flex items-center gap-2 text-[9px] font-bold ${commuteAdviceOptions.length > 0 ? 'text-blue-700' : 'text-amber-700'}`}>
                   <span aria-hidden="true">{commuteAdviceOptions.length > 0 ? '✓' : '!'}</span>
                   <span>
-                    {commuteAdviceOptions.length > 0
+                    <T>{commuteAdviceOptions.length > 0
                       ? `${commuteAdviceOptions.length} option${commuteAdviceOptions.length === 1 ? '' : 's'} selected`
-                      : 'Select at least one option'}
+                      : 'Select at least one option'}</T>
                   </span>
                 </div>
               </div>
@@ -1105,12 +1091,8 @@ export default function PlanMyCommuteModal({
                     ✨
                   </span>
                   <div>
-                    <p className="text-[10px] font-extrabold text-slate-700 leading-none">
-                      AI advisory
-                    </p>
-                    <p className="text-[9px] text-slate-400 mt-1">
-                      Choose recommendation language
-                    </p>
+                    <p className="text-[10px] font-extrabold text-slate-700 leading-none"><T>{" AI advisory "}</T></p>
+                    <p className="text-[9px] text-slate-400 mt-1"><T>{" Choose recommendation language "}</T></p>
                   </div>
                 </div>
               </div>
@@ -1125,9 +1107,7 @@ export default function PlanMyCommuteModal({
                       ? 'bg-white text-slate-950 shadow-sm'
                       : 'text-slate-500 hover:text-slate-800'
                   }`}
-                >
-                  English
-                </button>
+                ><T>{" English "}</T></button>
                 <button
                   type="button"
                   onClick={() => setCommuteLanguage('tl')}
@@ -1137,9 +1117,7 @@ export default function PlanMyCommuteModal({
                       ? 'bg-slate-900 text-white shadow-sm'
                       : 'text-slate-500 hover:text-slate-800'
                   }`}
-                >
-                  Filipino
-                </button>
+                ><T>{" Filipino "}</T></button>
               </div>
             </div>
 
@@ -1147,9 +1125,7 @@ export default function PlanMyCommuteModal({
                 (commuteDestination.trim() && !selectedDestinationAddress)) && (
                 <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 flex items-start gap-2">
                   <span className="text-amber-700 font-black" aria-hidden="true">!</span>
-                  <p className="text-[9px] font-semibold text-amber-800">
-                    Select each location from the address suggestions to verify its exact map coordinates.
-                  </p>
+                  <p className="text-[9px] font-semibold text-amber-800"><T>{" Select each location from the address suggestions to verify its exact map coordinates. "}</T></p>
                 </div>
               )}
 
@@ -1167,7 +1143,7 @@ export default function PlanMyCommuteModal({
                   !commuteDepartureDate ||
                   !commuteDepartureTime
                 }
-                className="commute-plan-button sticky bottom-2 z-20 mt-3 flex min-h-[60px] w-full items-center gap-3 rounded-2xl bg-gradient-to-r from-blue-700 via-blue-600 to-indigo-600 px-3.5 text-left text-white shadow-lg transition hover:-translate-y-0.5 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:translate-y-0 sm:static"
+                className="commute-plan-button sticky bottom-2 z-20 mt-3 flex min-h-[60px] w-full items-center gap-3 rounded-2xl bg-gradient-to-r from-blue-700 via-blue-600 to-indigo-600 px-3.5 text-start text-white shadow-lg transition hover:-translate-y-0.5 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:translate-y-0 sm:static"
               >
                 <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-white/15 ring-1 ring-white/25" aria-hidden="true">
                   {commuteLoading ? (
@@ -1178,11 +1154,9 @@ export default function PlanMyCommuteModal({
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block text-[11px] font-black leading-tight">
-                    {commuteLoading ? 'Checking live route…' : 'Check Route & Weather'}
+                    <T>{commuteLoading ? 'Checking live route…' : 'Check Route & Weather'}</T>
                   </span>
-                  <span className="mt-1 block text-[8px] font-semibold text-white/75">
-                    Live traffic · rain risk · best departure
-                  </span>
+                  <span className="mt-1 block text-[8px] font-semibold text-white/75"><T>{" Live traffic · rain risk · best departure "}</T></span>
                 </span>
                 <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-white text-base font-black text-blue-700" aria-hidden="true">→</span>
               </button>
@@ -1203,9 +1177,7 @@ export default function PlanMyCommuteModal({
                     !
                   </span>
                   <div className="min-w-0">
-                    <p className="text-xs font-extrabold uppercase tracking-wide text-amber-950">
-                      Check your trip details
-                    </p>
+                    <p className="text-xs font-extrabold uppercase tracking-wide text-amber-950"><T>{" Check your trip details "}</T></p>
                     <p className="text-[10px] mt-1 text-amber-800">{commuteError}</p>
                   </div>
                 </div>
@@ -1221,7 +1193,7 @@ export default function PlanMyCommuteModal({
                 <div className="flex items-start gap-2.5">
                   <span className="w-7 h-7 rounded-xl bg-red-100 text-red-700 flex items-center justify-center flex-shrink-0 font-black" aria-hidden="true">×</span>
                   <div className="min-w-0">
-                    <p className="text-xs font-extrabold uppercase tracking-wide text-red-950">ROUTE CHECK FAILED</p>
+                    <p className="text-xs font-extrabold uppercase tracking-wide text-red-950"><T>{"ROUTE CHECK FAILED"}</T></p>
                     <p className="text-[10px] mt-1 text-red-800">{commuteError}</p>
                   </div>
                 </div>
@@ -1231,7 +1203,7 @@ export default function PlanMyCommuteModal({
                   disabled={commuteLoading}
                   className="mt-3 w-full min-h-10 rounded-xl bg-red-600 text-white text-[10px] font-extrabold hover:bg-red-700 transition disabled:opacity-50"
                 >
-                  {commuteLoading ? 'Retrying…' : 'Retry route check'}
+                  <T>{commuteLoading ? 'Retrying…' : 'Retry route check'}</T>
                 </button>
               </div>
             )}
@@ -1245,10 +1217,8 @@ export default function PlanMyCommuteModal({
               >
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2 text-xs font-extrabold text-slate-700">
-                    <Spinner size="sm" />
-                    Updating route…
-                  </div>
-                  <span className="text-[9px] font-bold text-slate-400">Live forecast</span>
+                    <Spinner size="sm" /><T>{" Updating route… "}</T></div>
+                  <span className="text-[9px] font-bold text-slate-400"><T>{"Live forecast"}</T></span>
                 </div>
                 <div className="mt-4 space-y-3 animate-pulse" aria-hidden="true">
                   <div className="h-3 w-2/3 rounded-full bg-slate-200" />
@@ -1263,9 +1233,7 @@ export default function PlanMyCommuteModal({
                   </div>
                   <div className="h-14 rounded-xl bg-slate-100" />
                 </div>
-                <p className="text-[9px] text-slate-400 mt-3">
-                  TomTom route · Open-Meteo forecast
-                  {commuteResult ? ' · Previous successful result remains visible below.' : ''}
+                <p className="text-[9px] text-slate-400 mt-3"><T>{" TomTom route · Open-Meteo forecast "}</T><T>{commuteResult ? ' · Previous successful result remains visible below.' : ''}</T>
                 </p>
               </div>
             )}
@@ -1273,8 +1241,8 @@ export default function PlanMyCommuteModal({
             {!commuteHasAttempted && !commuteLoading && (
               <div className="rounded-3xl border border-dashed border-slate-200 bg-white/70 p-8 sm:p-10 lg:min-h-[420px] flex flex-col items-center justify-center text-center">
                 <span className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-xl" aria-hidden="true">📍</span>
-                <p className="mt-3 text-xs font-extrabold text-slate-700">Your trip advice will appear here</p>
-                <p className="mt-1 text-[10px] text-slate-400">Choose your route, departure time, and advice options, then generate.</p>
+                <p className="mt-3 text-xs font-extrabold text-slate-700"><T>{"Your trip advice will appear here"}</T></p>
+                <p className="mt-1 text-[10px] text-slate-400"><T>{"Choose your route, departure time, and advice options, then generate."}</T></p>
               </div>
             )}
 

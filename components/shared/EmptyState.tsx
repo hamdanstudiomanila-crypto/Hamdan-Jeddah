@@ -1,3 +1,4 @@
+import { T } from '@/components/language/LanguageProvider';
 import type { ReactNode } from 'react';
 
 type EmptyStateProps = {
@@ -13,8 +14,8 @@ export default function EmptyState({ icon = '📭', title, description, action }
       <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-xl shadow-sm dark:bg-slate-900" aria-hidden="true">
         {icon}
       </span>
-      <p className="mt-3 text-sm font-extrabold text-slate-900 dark:text-white">{title}</p>
-      {description && <p className="mt-1 max-w-sm text-[11px] leading-relaxed text-slate-500 dark:text-slate-300">{description}</p>}
+      <p className="mt-3 text-sm font-extrabold text-slate-900 dark:text-white"><T>{title}</T></p>
+      {description && <p className="mt-1 max-w-sm text-[11px] leading-relaxed text-slate-500 dark:text-slate-300"><T>{description}</T></p>}
       {action && <div className="mt-4">{action}</div>}
     </div>
   );

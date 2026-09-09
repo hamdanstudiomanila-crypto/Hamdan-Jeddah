@@ -1,4 +1,6 @@
 'use client';
+import { T, useLanguage } from '@/components/language/LanguageProvider';
+
 
 import { useEffect, useId, useRef, type ReactNode } from 'react';
 
@@ -37,6 +39,7 @@ export default function ModalShell({
   className = '',
   placement = 'center',
 }: ModalShellProps) {
+  const { t } = useLanguage();
   const titleId = useId();
   const descriptionId = useId();
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -121,11 +124,11 @@ export default function ModalShell({
           )}
           <div className="min-w-0 flex-1">
             <h2 id={titleId} className="text-base font-black leading-tight text-slate-950 dark:text-white sm:text-lg">
-              {title}
+              <T>{title}</T>
             </h2>
             {description && (
               <p id={descriptionId} className="mt-1 text-[11px] leading-relaxed text-slate-500 dark:text-slate-300">
-                {description}
+                <T>{description}</T>
               </p>
             )}
           </div>
@@ -135,7 +138,7 @@ export default function ModalShell({
             onClick={() => onCloseRef.current()}
             disabled={closeDisabled}
             className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-slate-100 text-xl text-slate-500 transition hover:bg-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
-            aria-label={`Close ${title}`}
+            aria-label={`${t('Close')} ${t(title)}`}
           >
             ×
           </button>

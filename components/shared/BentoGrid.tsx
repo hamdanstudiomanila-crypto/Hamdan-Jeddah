@@ -26,7 +26,7 @@ export function BentoGridItem({
     <button
       type="button"
       onClick={onClick}
-      className={`card-style !p-3 sm:!p-4 flex items-center gap-3 text-left hover:bg-slate-50 hover:-translate-y-0.5 transition min-h-[76px] ${className}`}
+      className={`card-style !p-3 sm:!p-4 flex items-center gap-3 text-start hover:bg-slate-50 hover:-translate-y-0.5 transition min-h-[76px] ${className}`}
     >
       <span className={`w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 ${iconWrapClassName}`}>
         {icon}

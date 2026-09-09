@@ -1,3 +1,4 @@
+import { T } from '@/components/language/LanguageProvider';
 import type { LucideIcon } from 'lucide-react';
 
 type Props = {
@@ -21,7 +22,7 @@ export default function EmployeeSummaryCard({ label, value, icon: Icon, tone, on
     <button
       type="button"
       onClick={onClick}
-      className="group relative min-h-24 overflow-hidden rounded-2xl border border-slate-200 bg-white p-3 text-left shadow-[0_8px_24px_rgba(15,23,42,0.07)] transition duration-200 hover:-translate-y-0.5 hover:border-green-200 hover:shadow-lg dark:bg-[#292f2b] dark:hover:border-green-700 sm:p-4"
+      className="group relative min-h-24 overflow-hidden rounded-2xl border border-slate-200 bg-white p-3 text-start shadow-[0_8px_24px_rgba(15,23,42,0.07)] transition duration-200 hover:-translate-y-0.5 hover:border-green-200 hover:shadow-lg dark:bg-[#292f2b] dark:hover:border-green-700 sm:p-4"
       aria-label={`View ${label.toLowerCase()} details`}
     >
       <div className="flex items-center justify-between gap-3">
@@ -32,7 +33,7 @@ export default function EmployeeSummaryCard({ label, value, icon: Icon, tone, on
         <span className="stat-number text-2xl text-slate-900 dark:text-white">{value}</span>
       </div>
       <div className="mt-3 min-w-0">
-        <p className="text-xs font-semibold text-slate-600 dark:text-slate-300 sm:text-sm">{label}</p>
+        <p className="text-xs font-semibold text-slate-600 dark:text-slate-300 sm:text-sm"><T>{label}</T></p>
         {detail ? <p className="mt-0.5 truncate text-[9px] font-bold text-orange-600 dark:text-orange-300 sm:text-[10px]">{detail}</p> : null}
       </div>
       <span className={`absolute inset-x-4 bottom-0 h-0.5 rounded-t-full bg-gradient-to-r ${tones[tone].split(' shadow-')[0]}`} aria-hidden="true" />

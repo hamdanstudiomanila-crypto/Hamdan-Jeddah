@@ -17,7 +17,7 @@ Private employee questions are answered only from the authenticated Supabase ses
 - Leave history: shows submitted requests, dates, type, status, reason, HR notes when available, filed time, and resolved time.
 - Payslip access: My Payslips shows HR-published payslips; Ask AI can answer the signed-in employee's own latest or selected payslip (latest means most recently uploaded and published; an explicit cutoff selects that period) but must not provide downloadable PDFs in chat.
 - Payslip AI security: payslip questions require password confirmation; the password is verified by Supabase and is not sent to n8n or Gemini; the unlock is short-lived and scoped to the signed-in employee.
-- Plan My Commute: checks a selected route using exact From/To addresses, departure date/time, route weather, rain risk, traffic delays, and best departure advice; address search is Philippines-focused.
+- Plan My Commute: checks a selected route using exact From/To addresses, departure date/time, route weather, rain risk, traffic delays, and best departure advice; address search is Jeddah-focused.
 - Profile update: employees can edit allowed profile fields; restricted employment, role, government ID, payroll, and admin-controlled fields go through HR/admin.
 - Work directory: Ask AI may share active employee full name, work email, and designation. It must not share salary, payslips, attendance, leave, government IDs, personal email, phone, or address.
 - Ask AI privacy: identity comes only from the Supabase session. Names, IDs, or emails typed in chat never authorize private data access.

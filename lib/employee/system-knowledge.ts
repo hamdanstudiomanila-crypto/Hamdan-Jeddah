@@ -46,8 +46,8 @@ export const SYSTEM_KNOWLEDGE: Record<SystemKnowledgeMetric, { en: string; tl: s
     tl: 'Para sa missing time-in o time-out, buksan ang My Disputes o Attendance, piliin ang Report Missing Log, ilagay ang missing date/time at reason, tapos i-submit. HR muna ang magre-review bago ma-correct ang record.',
   },
   leave_request_process: {
-    en: 'To request leave, open Leave, click New Leave Request, choose the leave type, start date, end date, and reason, then submit. The portal estimates chargeable working days and excludes configured holidays where applicable. HR or an approver reviews the request.',
-    tl: 'Para mag-request ng leave, buksan ang Leave, i-click ang New Leave Request, piliin ang leave type, start date, end date, at reason, tapos i-submit. Ine-estimate ng portal ang chargeable working days at ine-exclude ang configured holidays kung applicable. HR o approver ang magre-review.',
+    en: 'To request leave, open Leave, click New Leave Request, choose the leave type, start date, end date, and reason, then submit. Sick leave requires a supporting PDF, JPG, or PNG document up to 10 MB. The portal estimates chargeable working days and excludes configured holidays where applicable. HR or an approver reviews the request.',
+    tl: 'Para mag-request ng leave, buksan ang Leave, i-click ang New Leave Request, piliin ang leave type, start date, end date, at reason, tapos i-submit. Kailangan ng supporting PDF, JPG, o PNG na hanggang 10 MB para sa sick leave. Ine-estimate ng portal ang chargeable working days at ine-exclude ang configured holidays kung applicable. HR o approver ang magre-review.',
   },
   leave_credits: {
     en: 'Leave credits show your yearly allocation, used credits, and remaining balance. Regular employees usually have tracked credits; other employment statuses may still file leave but can have different credit handling based on HR rules.',

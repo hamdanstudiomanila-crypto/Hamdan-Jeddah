@@ -3,6 +3,7 @@ import { Plus_Jakarta_Sans, Inter, Oswald } from "next/font/google";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/next";
 import ThemeRouteGuard from "@/components/ThemeRouteGuard";
+import { LanguageProvider } from "@/components/language/LanguageProvider";
 import "./globals.css";
 
 const themeInitializationScript = `
@@ -68,8 +69,10 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: themeInitializationScript }} />
       </head>
       <body className="min-h-full flex flex-col">
-        <ThemeRouteGuard />
-        {children}
+        <LanguageProvider>
+          <ThemeRouteGuard />
+          {children}
+        </LanguageProvider>
         <SpeedInsights />
         <Analytics />
       </body>

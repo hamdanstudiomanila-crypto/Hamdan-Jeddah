@@ -1,4 +1,6 @@
 'use client';
+import { T, useLanguage } from '@/components/language/LanguageProvider';
+
 
 import type { Dispatch, SetStateAction } from 'react';
 import Spinner from '@/components/Spinner';
@@ -6,26 +8,25 @@ import ModalShell from '@/components/shared/ModalShell';
 
 type LeaveForm = { leave_type: string; start_date: string; end_date: string; reason: string };
 type Leave = { id: string; leave_type: string; start_date: string; end_date: string };
-type Props = { open: boolean; onClose: () => void; onBack: () => void; countLeaveDays: (start: string, end: string) => number; countLeaveHolidays: (start: string, end: string) => number; fallbackLeaveCredits: number; isRegular: boolean; leaveCredits: { total_credits: number; used_credits: number } | null; leaveForm: LeaveForm; leaveMsg: { type: 'success' | 'error'; text: string } | null; leaveSaving: boolean; remainingCredits: number; setLeaveForm: Dispatch<SetStateAction<LeaveForm>>; submitLeave: () => void | Promise<void>; todayJeddah: string; upcomingApprovedLeaves: Leave[] };
+type Props = { leaveAttachment: File | null; setLeaveAttachment: (file: File | null) => void; open: boolean; onClose: () => void; onBack: () => void; countLeaveDays: (start: string, end: string) => number; countLeaveHolidays: (start: string, end: string) => number; fallbackLeaveCredits: number; isRegular: boolean; leaveCredits: { total_credits: number; used_credits: number } | null; leaveForm: LeaveForm; leaveMsg: { type: 'success' | 'error'; text: string } | null; leaveSaving: boolean; remainingCredits: number; setLeaveForm: Dispatch<SetStateAction<LeaveForm>>; submitLeave: () => void | Promise<void>; todayJeddah: string; upcomingApprovedLeaves: Leave[] };
 
-export default function LeaveRequestModal({ open, onClose, onBack, countLeaveDays, countLeaveHolidays, fallbackLeaveCredits, isRegular, leaveCredits, leaveForm, leaveMsg, leaveSaving, remainingCredits, setLeaveForm, submitLeave, todayJeddah, upcomingApprovedLeaves }: Props) {
+export default function LeaveRequestModal({ leaveAttachment, setLeaveAttachment, open, onClose, onBack, countLeaveDays, countLeaveHolidays, fallbackLeaveCredits, isRegular, leaveCredits, leaveForm, leaveMsg, leaveSaving, remainingCredits, setLeaveForm, submitLeave, todayJeddah, upcomingApprovedLeaves }: Props) {
+  const { t: localize } = useLanguage();
   return (
-    <ModalShell open={open} onClose={onClose} title="File a Leave Request" size="sm" closeDisabled={leaveSaving}>
+    <ModalShell open={open} onClose={onClose} title={localize("File a Leave Request")} size="sm" closeDisabled={leaveSaving}>
             {/* Credits badge for Regular employees */}
             {isRegular && (
               <div className={`flex items-center justify-between p-3 rounded-xl mb-4 ${remainingCredits <= 3 ? 'bg-orange-50 border border-orange-100' : 'bg-green-50 border border-green-100'}`}>
-                <p className={`text-xs font-bold ${remainingCredits <= 3 ? 'text-orange-700' : 'text-green-700'}`}>
-                  Leave Credits ({new Date().getFullYear()})
+                <p className={`text-xs font-bold ${remainingCredits <= 3 ? 'text-orange-700' : 'text-green-700'}`}><T>{" Leave Credits ("}</T>{new Date().getFullYear()})
                 </p>
                 <p className={`text-sm font-extrabold ${remainingCredits <= 3 ? 'text-orange-700' : 'text-green-700'}`}>
-                  {remainingCredits} / {leaveCredits?.total_credits ?? fallbackLeaveCredits} remaining
-                </p>
+                  {remainingCredits} / {leaveCredits?.total_credits ?? fallbackLeaveCredits}<T>{" remaining "}</T></p>
               </div>
             )}
 
             {upcomingApprovedLeaves.length > 0 && (
               <div className="p-3 rounded-xl mb-4 bg-blue-50 border border-blue-100">
-                <p className="text-blue-700 text-[10px] font-extrabold uppercase tracking-wide mb-2">Upcoming approved leave</p>
+                <p className="text-blue-700 text-[10px] font-extrabold uppercase tracking-wide mb-2"><T>{"Upcoming approved leave"}</T></p>
                 <div className="space-y-1.5">
                   {upcomingApprovedLeaves.map((leave) => (
                     <div key={leave.id} className="flex items-center justify-between gap-2 text-xs">
@@ -39,7 +40,7 @@ export default function LeaveRequestModal({ open, onClose, onBack, countLeaveDay
 
             {!isRegular && (
               <div className="flex items-start gap-2 p-3 rounded-xl mb-4 bg-sky-50 border border-sky-100">
-                <p className="text-xs text-sky-700 font-medium">ℹ️ Leave credits apply to Regular employees only. Your request will still be reviewed by HR.</p>
+                <p className="text-xs text-sky-700 font-medium"><T>{"ℹ️ Leave credits apply to Regular employees only. Your request will still be reviewed by HR."}</T></p>
               </div>
             )}
 
@@ -49,7 +50,7 @@ export default function LeaveRequestModal({ open, onClose, onBack, countLeaveDay
               </div>
             )}
 
-            <label className="label-branded">Leave Type</label>
+            <label className="label-branded"><T>{"Leave Type"}</T></label>
             <div className="grid grid-cols-3 gap-2 mb-4">
               {(['Sick', 'Vacation', 'Emergency'] as const).map((t) => (
                 <button
@@ -63,12 +64,16 @@ export default function LeaveRequestModal({ open, onClose, onBack, countLeaveDay
               ))}
             </div>
 
+            <label htmlFor="leave-support" className="label-branded">Supporting document {leaveForm.leave_type === 'Sick' ? '(required)' : '(optional)'}</label>
+            <input id="leave-support" type="file" accept="application/pdf,image/jpeg,image/png" required={leaveForm.leave_type === 'Sick'} disabled={leaveSaving} onChange={event => setLeaveAttachment(event.target.files?.[0] ?? null)} className="input-field mb-2" />
+            <p className="mb-4 text-xs text-slate-500">{leaveAttachment?.name || 'PDF, JPG, or PNG, up to 10 MB. Required for sick leave.'}</p>
+
             {/* Start/End Date -- no `min` restriction to today anymore, so
                 past dates can be filed retroactively (e.g. forgot to file
                 before a day already tagged "Absent" by the overnight
                 sweep). Once HR approves, settle_overdue_leave_days() will
                 flip that Absent tag to the specific leave type filed here. */}
-            <label className="label-branded">Start Date</label>
+            <label className="label-branded"><T>{"Start Date"}</T></label>
             <input
               type="date"
               className="input-field mb-3"
@@ -76,7 +81,7 @@ export default function LeaveRequestModal({ open, onClose, onBack, countLeaveDay
               onChange={(e) => setLeaveForm({ ...leaveForm, start_date: e.target.value, end_date: e.target.value })}
             />
 
-            <label className="label-branded">End Date</label>
+            <label className="label-branded"><T>{"End Date"}</T></label>
             <input
               type="date"
               className="input-field mb-3"
@@ -88,32 +93,29 @@ export default function LeaveRequestModal({ open, onClose, onBack, countLeaveDay
             {leaveForm.start_date && leaveForm.end_date && (
               <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 mb-3">
                 <p className="text-slate-700 text-xs font-bold">
-                  📅 {countLeaveDays(leaveForm.start_date, leaveForm.end_date)} chargeable working day{countLeaveDays(leaveForm.start_date, leaveForm.end_date) === 1 ? '' : 's'}
+                  📅 {countLeaveDays(leaveForm.start_date, leaveForm.end_date)}<T>{" chargeable working day"}</T><T>{countLeaveDays(leaveForm.start_date, leaveForm.end_date) === 1 ? '' : 's'}</T>
                 </p>
-                <p className="text-slate-400 text-[10px] mt-1">
-                  Weekends and company holidays are excluded.
-                  {countLeaveHolidays(leaveForm.start_date, leaveForm.end_date) > 0 && ` ${countLeaveHolidays(leaveForm.start_date, leaveForm.end_date)} holiday${countLeaveHolidays(leaveForm.start_date, leaveForm.end_date) === 1 ? '' : 's'} excluded.`}
+                <p className="text-slate-400 text-[10px] mt-1"><T>{" Weekends and company holidays are excluded. "}</T>{countLeaveHolidays(leaveForm.start_date, leaveForm.end_date) > 0 && ` ${countLeaveHolidays(leaveForm.start_date, leaveForm.end_date)} holiday${countLeaveHolidays(leaveForm.start_date, leaveForm.end_date) === 1 ? '' : 's'} excluded.`}
                 </p>
                 {isRegular && (
-                  <p className={`text-[10px] font-bold mt-1 ${remainingCredits - countLeaveDays(leaveForm.start_date, leaveForm.end_date) < 0 ? 'text-orange-600' : 'text-green-600'}`}>
-                    Estimated balance after approval: {remainingCredits - countLeaveDays(leaveForm.start_date, leaveForm.end_date)} credit{Math.abs(remainingCredits - countLeaveDays(leaveForm.start_date, leaveForm.end_date)) === 1 ? '' : 's'}
+                  <p className={`text-[10px] font-bold mt-1 ${remainingCredits - countLeaveDays(leaveForm.start_date, leaveForm.end_date) < 0 ? 'text-orange-600' : 'text-green-600'}`}><T>{" Estimated balance after approval: "}</T>{remainingCredits - countLeaveDays(leaveForm.start_date, leaveForm.end_date)}<T>{" credit"}</T><T>{Math.abs(remainingCredits - countLeaveDays(leaveForm.start_date, leaveForm.end_date)) === 1 ? '' : 's'}</T>
                   </p>
                 )}
                 {leaveForm.start_date < todayJeddah && (
-                  <p className="text-blue-600 text-[10px] font-bold mt-1">Filing for a past date</p>
+                  <p className="text-blue-600 text-[10px] font-bold mt-1"><T>{"Filing for a past date"}</T></p>
                 )}
                 {isRegular && remainingCredits < countLeaveDays(leaveForm.start_date, leaveForm.end_date) && (
-                  <p className="text-orange-600 text-[10px] font-bold mt-1">⚠️ This request exceeds your remaining credits.</p>
+                  <p className="text-orange-600 text-[10px] font-bold mt-1"><T>{"⚠️ This request exceeds your remaining credits."}</T></p>
                 )}
               </div>
             )}
 
-            <label className="label-branded">Reason (optional)</label>
+            <label className="label-branded"><T>{"Reason (optional)"}</T></label>
             <textarea
               className="input-field mb-6 min-h-[72px] resize-y"
               value={leaveForm.reason}
               onChange={(e) => setLeaveForm({ ...leaveForm, reason: e.target.value })}
-              placeholder="e.g. Medical appointment, family emergency..."
+              placeholder={localize("e.g. Medical appointment, family emergency...")}
             />
 
             <div className="flex gap-3">
@@ -121,16 +123,14 @@ export default function LeaveRequestModal({ open, onClose, onBack, countLeaveDay
                 type="button"
                 className="flex-1 p-3 bg-slate-100 rounded-full font-medium text-sm"
                 onClick={onBack}
-              >
-                ← Back
-              </button>
+              ><T>{" ← Back "}</T></button>
               <button
                 type="button"
                 className="flex-1 btn-primary disabled:opacity-50"
                 onClick={submitLeave}
                 disabled={leaveSaving || !leaveForm.start_date || !leaveForm.end_date}
               >
-                {leaveSaving ? <span className="flex items-center justify-center gap-2"><Spinner size="sm" />Submitting...</span> : 'Submit Request'}
+                <T>{leaveSaving ? <span className="flex items-center justify-center gap-2"><Spinner size="sm" /><T>{"Submitting..."}</T></span> : 'Submit Request'}</T>
               </button>
             </div>
     </ModalShell>

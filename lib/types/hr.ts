@@ -22,6 +22,8 @@ export type AttendanceDispute = {
 };
 
 export type LeaveRequest = {
+  attachment_path?: string | null;
+  attachment_name?: string | null;
   id: string;
   leave_type: string;
   start_date: string;

@@ -1,4 +1,6 @@
 'use client';
+import { T, useLanguage } from '@/components/language/LanguageProvider';
+
 
 import type { Dispatch, FormEvent, SetStateAction } from 'react';
 import Spinner from '@/components/Spinner';
@@ -8,44 +10,41 @@ type Employee = { id: string; role?: string | null; is_active?: boolean | null }
 type Props = { open: boolean; onClose: () => void; confirmPassword: string; deactivating: boolean; designation: string; editingId: string | null; email: string; emailChecking: boolean; emailConflict: boolean; employeeId: string; employeeIdConflict: string | null; employees: Employee[]; fullName: string; fullNameConflict: boolean | null; handleSave: (event: FormEvent) => void | Promise<void>; loading: boolean; password: string; passwordMismatch: boolean; resetForm: () => void; role: 'employee' | 'admin'; setConfirmPassword: Dispatch<SetStateAction<string>>; setDesignation: Dispatch<SetStateAction<string>>; setEmail: Dispatch<SetStateAction<string>>; setEmployeeId: Dispatch<SetStateAction<string>>; setFullName: Dispatch<SetStateAction<string>>; setPassword: Dispatch<SetStateAction<string>>; setRole: Dispatch<SetStateAction<'employee' | 'admin'>>; toggleAccountActive: (deactivate: boolean) => void | Promise<void> };
 
 export default function AccountFormModal({ open, onClose, confirmPassword, deactivating, designation, editingId, email, emailChecking, emailConflict, employeeId, employeeIdConflict, employees, fullName, fullNameConflict, handleSave, loading, password, passwordMismatch, resetForm, role, setConfirmPassword, setDesignation, setEmail, setEmployeeId, setFullName, setPassword, setRole, toggleAccountActive }: Props) {
+  const { t: localize } = useLanguage();
   const close = () => { resetForm(); onClose(); };
   return (
-    <ModalShell open={open} onClose={close} title={editingId ? 'Edit Account' : 'Create New Account'} size="sm" closeDisabled={loading || deactivating}>
+    <ModalShell open={open} onClose={close} title={localize(editingId ? 'Edit Account' : 'Create New Account')} size="sm" closeDisabled={loading || deactivating}>
             <form onSubmit={handleSave} className="space-y-4">
               <div>
                 <input
                   type="text"
-                  placeholder="Full Name"
+                  placeholder={localize("Full Name")}
                   required
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   className="input-field"
                 />
                 {fullNameConflict && (
-                  <p className="text-orange-600 text-xs font-medium mt-1.5 ml-1">
-                    ⚠️ Another account already uses this name. Make sure you&apos;re not accidentally editing the wrong employee.
-                  </p>
+                  <p className="text-orange-600 text-xs font-medium mt-1.5 ms-1"><T>{" ⚠️ Another account already uses this name. Make sure you're not accidentally editing the wrong employee. "}</T></p>
                 )}
               </div>
 
               <div>
                 <input
                   type="text"
-                  placeholder="Employee ID"
+                  placeholder={localize("Employee ID")}
                   value={employeeId}
                   onChange={(e) => setEmployeeId(e.target.value)}
                   className="input-field"
                 />
                 {employeeIdConflict && (
-                  <p className="text-red-600 text-xs font-medium mt-1.5 ml-1">
-                    ⚠️ This Employee ID is already used by {employeeIdConflict}. Please use a different one.
-                  </p>
+                  <p className="text-red-600 text-xs font-medium mt-1.5 ms-1"><T>{" ⚠️ This Employee ID is already used by "}</T>{employeeIdConflict}<T>{". Please use a different one. "}</T></p>
                 )}
               </div>
 
               <input
                 type="text"
-                placeholder="Designation"
+                placeholder={localize("Designation")}
                 value={designation}
                 onChange={(e) => setDesignation(e.target.value)}
                 className="input-field"
@@ -56,26 +55,22 @@ export default function AccountFormModal({ open, onClose, confirmPassword, deact
                   <div>
                     <input
                       type="email"
-                      placeholder="Email"
+                      placeholder={localize("Email")}
                       required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       className="input-field"
                     />
                     {emailChecking && (
-                      <p className="text-slate-400 text-xs font-medium mt-1.5 ml-1">
-                        Checking email availability...
-                      </p>
+                      <p className="text-slate-400 text-xs font-medium mt-1.5 ms-1"><T>{" Checking email availability... "}</T></p>
                     )}
                     {!emailChecking && emailConflict && (
-                      <p className="text-red-600 text-xs font-medium mt-1.5 ml-1">
-                        ⚠️ An account with this email already exists.
-                      </p>
+                      <p className="text-red-600 text-xs font-medium mt-1.5 ms-1"><T>{" ⚠️ An account with this email already exists. "}</T></p>
                     )}
                   </div>
                   <input
                     type="password"
-                    placeholder="Password"
+                    placeholder={localize("Password")}
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -84,16 +79,14 @@ export default function AccountFormModal({ open, onClose, confirmPassword, deact
                   <div>
                     <input
                       type="password"
-                      placeholder="Confirm Password"
+                      placeholder={localize("Confirm Password")}
                       required
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       className="input-field"
                     />
                     {passwordMismatch && (
-                      <p className="text-red-600 text-xs font-medium mt-1.5 ml-1">
-                        ⚠️ Passwords do not match.
-                      </p>
+                      <p className="text-red-600 text-xs font-medium mt-1.5 ms-1"><T>{" ⚠️ Passwords do not match. "}</T></p>
                     )}
                   </div>
                 </>
@@ -106,18 +99,14 @@ export default function AccountFormModal({ open, onClose, confirmPassword, deact
                   className={`p-3 rounded-full font-bold text-sm transition ${
                     role === 'employee' ? 'bg-sky-600 text-white' : 'bg-slate-100 text-slate-600'
                   }`}
-                >
-                  Employee
-                </button>
+                ><T>{" Employee "}</T></button>
                 <button
                   type="button"
                   onClick={() => setRole('admin')}
                   className={`p-3 rounded-full font-bold text-sm transition ${
                     role === 'admin' ? 'bg-purple-600 text-white' : 'bg-slate-100 text-slate-600'
                   }`}
-                >
-                  HR Admin
-                </button>
+                ><T>{" HR Admin "}</T></button>
               </div>
 
               {editingId && (
@@ -125,9 +114,7 @@ export default function AccountFormModal({ open, onClose, confirmPassword, deact
                   type="button"
                   onClick={resetForm}
                   className="w-full p-3 rounded-full font-bold bg-slate-100 text-slate-600"
-                >
-                  Cancel Edit
-                </button>
+                ><T>{" Cancel Edit "}</T></button>
               )}
 
               {/* Deactivate / Reactivate -- hidden for super_admin accounts
@@ -143,9 +130,9 @@ export default function AccountFormModal({ open, onClose, confirmPassword, deact
                       disabled={deactivating}
                       className="w-full p-3 rounded-full font-bold bg-green-50 text-green-700 hover:bg-green-100 transition disabled:opacity-50"
                     >
-                      {deactivating ? (
-                        <span className="flex items-center justify-center gap-2"><Spinner size="sm" />Reactivating...</span>
-                      ) : 'Reactivate Account'}
+                      <T>{deactivating ? (
+                        <span className="flex items-center justify-center gap-2"><Spinner size="sm" /><T>{"Reactivating..."}</T></span>
+                      ) : 'Reactivate Account'}</T>
                     </button>
                   ) : (
                     <button
@@ -154,23 +141,19 @@ export default function AccountFormModal({ open, onClose, confirmPassword, deact
                       disabled={deactivating}
                       className="w-full p-3 rounded-full font-bold bg-red-50 text-red-700 hover:bg-red-100 transition disabled:opacity-50"
                     >
-                      {deactivating ? (
-                        <span className="flex items-center justify-center gap-2"><Spinner size="sm" />Deactivating...</span>
-                      ) : 'Deactivate Account'}
+                      <T>{deactivating ? (
+                        <span className="flex items-center justify-center gap-2"><Spinner size="sm" /><T>{"Deactivating..."}</T></span>
+                      ) : 'Deactivate Account'}</T>
                     </button>
                   )}
-                  <p className="text-slate-400 text-[11px] mt-2 text-center">
-                    Deactivating blocks login but keeps all attendance, leave, and payslip history.
-                  </p>
+                  <p className="text-slate-400 text-[11px] mt-2 text-center"><T>{" Deactivating blocks login but keeps all attendance, leave, and payslip history. "}</T></p>
                 </div>
               )}
 
               <button disabled={loading || !!employeeIdConflict || emailConflict || passwordMismatch} className="btn-primary">
-                {loading ? (
+                <T>{loading ? (
                   <span className="flex items-center justify-center gap-2">
-                    <Spinner size="sm" />
-                    Processing...
-                  </span>
+                    <Spinner size="sm" /><T>{"Processing..."}</T></span>
                 ) : employeeIdConflict
                   ? 'Fix Employee ID Conflict First'
                   : emailConflict
@@ -179,7 +162,7 @@ export default function AccountFormModal({ open, onClose, confirmPassword, deact
                   ? 'Passwords Do Not Match'
                   : editingId
                   ? 'Save Changes'
-                  : 'Create Account'}
+                  : 'Create Account'}</T>
               </button>
             </form>
     </ModalShell>

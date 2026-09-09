@@ -1,4 +1,6 @@
 'use client';
+import { T, useLanguage } from '@/components/language/LanguageProvider';
+
 
 import type { Dispatch, RefObject, SetStateAction } from 'react';
 import Spinner from '@/components/Spinner';
@@ -10,10 +12,11 @@ type Feedback = { type: 'success' | 'error'; text: string } | null;
 type Props = { open: boolean; onClose: () => void; onBack: () => void; deletePayslip: (payslipId: string, filePath: string, employeeId: string) => void | Promise<void>; employeePayslips: Payslip[]; employeePayslipsLoading: boolean; generateCutoffOptions: () => { value: string; label: string }[]; payslipCutoff: string; payslipFile: File | null; payslipFileRef: RefObject<HTMLInputElement | null>; payslipMsg: Feedback; payslipUploading: boolean; publishMsg: Feedback; publishPayslip: (payslipId: string, employeeId: string) => void | Promise<void>; publishingId: string | null; selectedProfile: Profile | null; setPayslipCutoff: Dispatch<SetStateAction<string>>; setPayslipFile: Dispatch<SetStateAction<File | null>>; uploadPayslip: (employeeId: string) => void | Promise<void> };
 
 export default function PayslipManagementModal({ open, onClose, onBack, deletePayslip, employeePayslips, employeePayslipsLoading, generateCutoffOptions, payslipCutoff, payslipFile, payslipFileRef, payslipMsg, payslipUploading, publishMsg, publishPayslip, publishingId, selectedProfile, setPayslipCutoff, setPayslipFile, uploadPayslip }: Props) {
+  const { t: localize } = useLanguage();
   if (!selectedProfile) return null;
   return (
-    <ModalShell open={open} onClose={onClose} title="Payslips" description={selectedProfile.full_name || 'Employee'} size="sm" closeDisabled={payslipUploading || Boolean(publishingId)}>
-            <button type="button" onClick={onBack} className="mb-4 text-xs font-bold text-slate-400 hover:text-slate-600">← Back</button>
+    <ModalShell open={open} onClose={onClose} title={localize("Payslips")} description={selectedProfile.full_name || 'Employee'} size="sm" closeDisabled={payslipUploading || Boolean(publishingId)}>
+            <button type="button" onClick={onBack} className="mb-4 text-xs font-bold text-slate-400 hover:text-slate-600"><T>{"← Back"}</T></button>
             {/* Existing payslips */}
             {publishMsg && (
               <div className={`p-2.5 rounded-xl text-xs font-bold mb-3 ${publishMsg.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
@@ -21,10 +24,10 @@ export default function PayslipManagementModal({ open, onClose, onBack, deletePa
               </div>
             )}
             {employeePayslipsLoading ? (
-              <p className="text-slate-400 text-xs mb-4">Loading payslips...</p>
+              <p className="text-slate-400 text-xs mb-4"><T>{"Loading payslips..."}</T></p>
             ) : employeePayslips.length === 0 ? (
               <div className="text-center py-6 border-2 border-dashed border-slate-200 rounded-2xl mb-4">
-                <p className="text-slate-400 text-sm">No payslips uploaded yet.</p>
+                <p className="text-slate-400 text-sm"><T>{"No payslips uploaded yet."}</T></p>
               </div>
             ) : (
               <div className="space-y-2 mb-6">
@@ -37,15 +40,14 @@ export default function PayslipManagementModal({ open, onClose, onBack, deletePa
                         {new Date(ps.uploaded_at).toLocaleDateString('en-US', { timeZone: 'Asia/Riyadh', month: 'short', day: 'numeric', year: 'numeric' })}
                       </p>
                       {ps.published ? (
-                        <span className="tag-present inline-block mt-1">
-                          Published{ps.published_at ? ` · ${new Date(ps.published_at).toLocaleDateString('en-US', { timeZone: 'Asia/Riyadh', month: 'short', day: 'numeric' })}` : ''}
+                        <span className="tag-present inline-block mt-1"><T>{" Published"}</T>{ps.published_at ? ` · ${new Date(ps.published_at).toLocaleDateString('en-US', { timeZone: 'Asia/Riyadh', month: 'short', day: 'numeric' })}` : ''}
                         </span>
                       ) : (
-                        <span className="tag-excused inline-block mt-1">Not yet published</span>
+                        <span className="tag-excused inline-block mt-1"><T>{"Not yet published"}</T></span>
                       )}
                       {ps.published && (
-                        <span className={`inline-block mt-1 ml-1 rounded-full px-2 py-1 text-[9px] font-extrabold uppercase tracking-wide ${ps.acknowledged_at ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
-                          {ps.acknowledged_at ? `Acknowledged · ${new Date(ps.acknowledged_at).toLocaleDateString('en-US', { timeZone: 'Asia/Riyadh', month: 'short', day: 'numeric' })}` : 'Not acknowledged'}
+                        <span className={`inline-block mt-1 ms-1 rounded-full px-2 py-1 text-[9px] font-extrabold uppercase tracking-wide ${ps.acknowledged_at ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
+                          <T>{ps.acknowledged_at ? `Acknowledged · ${new Date(ps.acknowledged_at).toLocaleDateString('en-US', { timeZone: 'Asia/Riyadh', month: 'short', day: 'numeric' })}` : 'Not acknowledged'}</T>
                         </span>
                       )}
                     </div>
@@ -57,7 +59,7 @@ export default function PayslipManagementModal({ open, onClose, onBack, deletePa
                           disabled={publishingId === ps.id}
                           className="flex-shrink-0 flex items-center gap-1.5 bg-blue-600 text-white text-xs font-bold px-3 py-2 rounded-full hover:bg-blue-700 transition disabled:opacity-50"
                         >
-                          {publishingId === ps.id ? <><Spinner size="sm" />Publishing...</> : 'Publish'}
+                          <T>{publishingId === ps.id ? <><Spinner size="sm" /><T>{"Publishing..."}</T></> : 'Publish'}</T>
                         </button>
                       )}
                       <button
@@ -76,7 +78,7 @@ export default function PayslipManagementModal({ open, onClose, onBack, deletePa
 
             {/* Upload new payslip */}
             <div className="space-y-3 pt-4 border-t border-slate-100">
-              <p className="label-branded">Upload New Payslip</p>
+              <p className="label-branded"><T>{"Upload New Payslip"}</T></p>
 
               {payslipMsg && (
                 <div className={`p-2.5 rounded-xl text-xs font-bold ${payslipMsg.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
@@ -85,7 +87,7 @@ export default function PayslipManagementModal({ open, onClose, onBack, deletePa
               )}
 
               <select className="input-field" value={payslipCutoff} onChange={(e) => setPayslipCutoff(e.target.value)}>
-                <option value="">Select cutoff period...</option>
+                <option value=""><T>{"Select cutoff period..."}</T></option>
                 {generateCutoffOptions().map((o) => (
                   <option key={o.value} value={o.value}>{o.label}</option>
                 ))}
@@ -96,7 +98,7 @@ export default function PayslipManagementModal({ open, onClose, onBack, deletePa
                 type="file"
                 accept="application/pdf"
                 onChange={(e) => setPayslipFile(e.target.files?.[0] ?? null)}
-                className="input-field text-sm file:mr-3 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200"
+                className="input-field text-sm file:me-3 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200"
               />
 
               <button
@@ -105,14 +107,12 @@ export default function PayslipManagementModal({ open, onClose, onBack, deletePa
                 disabled={payslipUploading || !payslipFile || !payslipCutoff}
                 className="w-full py-3 rounded-full bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 transition disabled:opacity-50"
               >
-                {payslipUploading ? (
-                  <span className="flex items-center justify-center gap-2"><Spinner size="sm" />Uploading...</span>
-                ) : 'Upload PDF'}
+                <T>{payslipUploading ? (
+                  <span className="flex items-center justify-center gap-2"><Spinner size="sm" /><T>{"Uploading..."}</T></span>
+                ) : 'Upload PDF'}</T>
               </button>
 
-              <button type="button" onClick={onClose} className="w-full py-3 rounded-full bg-slate-100 text-slate-600 font-medium text-sm hover:bg-slate-200 transition">
-                Close
-              </button>
+              <button type="button" onClick={onClose} className="w-full py-3 rounded-full bg-slate-100 text-slate-600 font-medium text-sm hover:bg-slate-200 transition"><T>{" Close "}</T></button>
             </div>
     </ModalShell>
   );

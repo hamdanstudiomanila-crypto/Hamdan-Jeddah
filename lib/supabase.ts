@@ -23,6 +23,8 @@ if (!supabaseUrl || !supabaseAnonKey) {
 export const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     flowType: 'implicit',
+    // Recovery page consumes the URL once, without an automatic exchange race.
+    detectSessionInUrl: typeof window === 'undefined' || window.location.pathname !== '/auth/reset-password',
   },
 });
 
@@ -46,6 +48,7 @@ export const supabaseAuthActions = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     flowType: 'implicit',
     persistSession: false,
+    detectSessionInUrl: false,
     autoRefreshToken: false,
     // Distinct storage key so this throwaway client doesn't collide
     // with the main `supabase` client's storage key -- silences the

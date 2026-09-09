@@ -1,4 +1,6 @@
 'use client';
+import { T } from '@/components/language/LanguageProvider';
+
 
 import ModalShell from '@/components/shared/ModalShell';
 import Image from 'next/image';
@@ -9,6 +11,6 @@ type Props = { open: boolean; onClose: () => void; initials: (name: string | nul
 export default function EmployeeChoiceModal({ open, onClose, initials, openEdit, openPayslipsModal, selectedProfile }: Props) {
   if (!selectedProfile) return null;
   return <ModalShell open={open} onClose={onClose} title={selectedProfile.full_name || 'Employee'} description={selectedProfile.designation || '---'} size="sm" icon={selectedProfile.avatar_url ? <Image src={selectedProfile.avatar_url} alt="" width={44} height={44} className="h-full w-full rounded-2xl object-cover"/> : initials(selectedProfile.full_name)}>
-    <div className="space-y-3"><button type="button" onClick={() => openEdit(selectedProfile)} className="w-full rounded-full bg-slate-900 py-3 text-sm font-bold text-white transition hover:bg-slate-700">✏️ Edit Profile</button><button type="button" onClick={() => openPayslipsModal(selectedProfile)} className="w-full rounded-full bg-blue-600 py-3 text-sm font-bold text-white transition hover:bg-blue-700">📄 Payslips</button><button type="button" onClick={onClose} className="w-full rounded-full bg-slate-100 py-3 text-sm font-medium text-slate-600 transition hover:bg-slate-200">Cancel</button></div>
+    <div className="space-y-3"><button type="button" onClick={() => openEdit(selectedProfile)} className="w-full rounded-full bg-slate-900 py-3 text-sm font-bold text-white transition hover:bg-slate-700"><T>{"✏️ Edit Profile"}</T></button><button type="button" onClick={() => openPayslipsModal(selectedProfile)} className="w-full rounded-full bg-blue-600 py-3 text-sm font-bold text-white transition hover:bg-blue-700"><T>{"📄 Payslips"}</T></button><button type="button" onClick={onClose} className="w-full rounded-full bg-slate-100 py-3 text-sm font-medium text-slate-600 transition hover:bg-slate-200"><T>{"Cancel"}</T></button></div>
   </ModalShell>;
 }

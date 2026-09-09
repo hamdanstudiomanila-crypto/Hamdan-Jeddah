@@ -483,7 +483,7 @@
 }
 
 /* Shared seasonal layer for the HR portal. The active class is resolved from
-   Super Admin app_settings, including scope and the Manila schedule window. */
+   Super Admin app_settings, including scope and the Jeddah schedule window. */
 #hr-dashboard-top.seasonal-theme {
   background-color: #eef8f1;
   background-image: radial-gradient(circle at 8% 2%, rgba(22, 163, 74, .18), transparent 24rem), radial-gradient(circle at 92% 8%, rgba(220, 38, 38, .16), transparent 26rem);
@@ -962,9 +962,21 @@
   }
 
   .dashboard-sidebar-fixed {
-    left: max(1.5rem, calc((100vw - 1920px) / 2 + 1.5rem));
+    inset-inline-start: max(1.5rem, calc((100vw - 1920px) / 2 + 1.5rem));
     bottom: auto;
   }
+}
+
+/* Arabic uses native shaping and logical layout; identifiers stay readable. */
+html[lang="ar"] {
+  --font-display: Tahoma, Arial, sans-serif;
+  --font-sans: Tahoma, Arial, sans-serif;
+}
+html[lang="ar"] body { font-family: Tahoma, Arial, sans-serif; }
+html[lang="ar"] :is(h1, h2, h3, p, button, label, span) { letter-spacing: normal; }
+html[lang="ar"] :is(input[type="email"], input[type="url"], input[type="tel"], input[type="number"], input[type="date"], input[type="time"]) {
+  direction: ltr;
+  text-align: start;
 }
 
 /* Dashboard contrast contract: text and surface utilities must not share inverted tokens. */

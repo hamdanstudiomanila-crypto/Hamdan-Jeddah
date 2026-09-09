@@ -5,8 +5,11 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import Image from 'next/image';
 import Spinner from '@/components/Spinner';
+import LanguageSetting from '@/components/language/LanguageSetting';
+import { T, useLanguage } from '@/components/language/LanguageProvider';
 
 export default function LoginPage() {
+  const { t } = useLanguage();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -96,7 +99,7 @@ export default function LoginPage() {
       {/* LOGIN CARD */}
       <div className="relative z-10 w-full max-w-lg bg-white p-6 sm:p-12 rounded-3xl shadow-2xl border border-gray-100">
         <div className="text-center mb-8 sm:mb-10">
-            <h2 className="text-xl sm:text-2xl font-black text-gray-900">Employee Login</h2>
+            <h2 className="text-xl sm:text-2xl font-black text-gray-900"><T>Employee Login</T></h2>
         </div>
 
         {error && (
@@ -107,8 +110,9 @@ export default function LoginPage() {
 
         <form onSubmit={handleLogin} className="space-y-5 sm:space-y-6">
           <div>
-            <label className="block text-sm font-bold text-gray-500 uppercase tracking-widest mb-2 ml-1">Username</label>
+            <label htmlFor="login-email" className="block text-sm font-bold text-gray-500 uppercase tracking-widest mb-2 ms-1"><T>Username</T></label>
             <input
+              id="login-email"
               type="email"
               required
               value={email}
@@ -118,8 +122,9 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-bold text-gray-500 uppercase tracking-widest mb-2 ml-1">Password</label>
+            <label htmlFor="login-password" className="block text-sm font-bold text-gray-500 uppercase tracking-widest mb-2 ms-1"><T>Password</T></label>
             <input
+              id="login-password"
               type="password"
               required
               value={password}
@@ -136,15 +141,16 @@ export default function LoginPage() {
             {loading ? (
               <span className="flex items-center justify-center gap-2">
                 <Spinner size="sm" />
-                Authenticating...
+                <T>Authenticating...</T>
               </span>
-            ) : 'Sign In'}
+            ) : t('Sign In')}
           </button>
         </form>
+        <LanguageSetting />
       </div>
 
       <p className="relative z-10 text-sm text-gray-400 mt-10 font-medium">
-        © {new Date().getFullYear()} Hamdan Studio Jeddah. All rights reserved.
+        © {new Date().getFullYear()} <T>Hamdan Studio Jeddah. All rights reserved.</T>
       </p>
     </main>
   );

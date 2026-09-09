@@ -1,4 +1,6 @@
 'use client';
+import { T, useLanguage } from '@/components/language/LanguageProvider';
+
 
 import { BellRing, CircleAlert, Clock3, HandCoins, Headphones, Plane, UserRound } from 'lucide-react';
 import ModalShell from '@/components/shared/ModalShell';
@@ -23,6 +25,7 @@ type Props = {
 };
 
 export default function EmployeeActionCenterModal(props: Props) {
+  const { t: localize } = useLanguage();
   const run = (action: () => void) => { props.onClose(); window.setTimeout(action, 0); };
   const items = [
     props.timeOutPending ? { label: 'Time Out pending', detail: 'Complete today’s attendance.', count: 'Action', icon: Clock3, action: props.onTimeOut, disabled: props.timeOutDisabled } : null,
@@ -34,8 +37,8 @@ export default function EmployeeActionCenterModal(props: Props) {
   ].filter((item): item is NonNullable<typeof item> => item !== null);
 
   return (
-    <ModalShell open={props.open} onClose={props.onClose} title="Action Center" description={`${items.length} item${items.length === 1 ? '' : 's'} need your attention`} icon={<BellRing size={20} />} size="sm">
-      {items.length > 0 ? <div className="divide-y divide-slate-200 overflow-hidden rounded-2xl border border-slate-200">{items.map(({ label, detail, count, icon: Icon, action, disabled }) => <button key={label} type="button" onClick={() => run(action)} disabled={disabled} className="flex min-h-16 w-full items-center gap-3 bg-white p-3 text-left transition hover:bg-slate-50 disabled:opacity-50 dark:bg-slate-900 dark:hover:bg-slate-800"><span className="grid h-9 w-9 flex-none place-items-center rounded-xl bg-green-50 text-green-700 dark:bg-green-950"><Icon size={17} /></span><span className="min-w-0 flex-1"><span className="block text-xs font-bold text-slate-900 dark:text-white">{label}</span><span className="mt-0.5 block text-xs text-slate-500 dark:text-slate-300">{detail}</span></span><span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200">{count}</span></button>)}</div> : <div className="rounded-2xl border border-green-100 bg-green-50 p-5 text-center"><p className="text-sm font-bold text-green-700">You’re all caught up!</p><p className="mt-1 text-xs text-green-600">No pending employee actions right now.</p></div>}
+    <ModalShell open={props.open} onClose={props.onClose} title={localize("Action Center")} description={`${items.length} item${items.length === 1 ? '' : 's'} need your attention`} icon={<BellRing size={20} />} size="sm">
+      {items.length > 0 ? <div className="divide-y divide-slate-200 overflow-hidden rounded-2xl border border-slate-200">{items.map(({ label, detail, count, icon: Icon, action, disabled }) => <button key={label} type="button" onClick={() => run(action)} disabled={disabled} className="flex min-h-16 w-full items-center gap-3 bg-white p-3 text-start transition hover:bg-slate-50 disabled:opacity-50 dark:bg-slate-900 dark:hover:bg-slate-800"><span className="grid h-9 w-9 flex-none place-items-center rounded-xl bg-green-50 text-green-700 dark:bg-green-950"><Icon size={17} /></span><span className="min-w-0 flex-1"><span className="block text-xs font-bold text-slate-900 dark:text-white"><T>{label}</T></span><span className="mt-0.5 block text-xs text-slate-500 dark:text-slate-300">{detail}</span></span><span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200">{count}</span></button>)}</div> : <div className="rounded-2xl border border-green-100 bg-green-50 p-5 text-center"><p className="text-sm font-bold text-green-700"><T>{"You’re all caught up!"}</T></p><p className="mt-1 text-xs text-green-600"><T>{"No pending employee actions right now."}</T></p></div>}
     </ModalShell>
   );
 }

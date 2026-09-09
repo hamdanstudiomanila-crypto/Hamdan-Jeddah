@@ -1,4 +1,6 @@
 'use client';
+import { T, useLanguage } from '@/components/language/LanguageProvider';
+
 
 import { useState } from 'react';
 import {
@@ -33,6 +35,7 @@ export default function MobileBottomNav({
   onActionCenter,
   onProfile,
 }: MobileBottomNavProps) {
+  const { t: localize } = useLanguage();
   const [activeTab, setActiveTab] = useState<MobileTab>('home');
 
   const handleClick = (
@@ -79,7 +82,7 @@ export default function MobileBottomNav({
 
   return (
     <nav
-      aria-label="Employee mobile navigation"
+      aria-label={localize("Employee mobile navigation")}
       className="
         fixed inset-x-0 bottom-0 z-[45]
         lg:hidden
@@ -163,7 +166,7 @@ export default function MobileBottomNav({
                   <span
                     className="
                       absolute
-                      -right-1
+                      -end-1
                       -top-1
                       flex
                       h-4
@@ -198,7 +201,7 @@ export default function MobileBottomNav({
                   }
                 `}
               >
-                {item.label}
+                <T>{item.label}</T>
               </span>
             </button>
           );

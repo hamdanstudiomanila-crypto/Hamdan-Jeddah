@@ -1,4 +1,6 @@
 'use client';
+import { T, useLanguage } from '@/components/language/LanguageProvider';
+
 import { applyPortalTheme } from '@/lib/portal-theme';
 import ArchivePasswordModal from '@/components/super-admin/modals/ArchivePasswordModal';
 import BackupPasswordModal from '@/components/super-admin/modals/BackupPasswordModal';
@@ -28,6 +30,7 @@ const AdminAttentionModal = dynamic(() => import('@/components/super-admin/modal
 const PAGE_SIZE = 5;
 
 export default function SuperAdminDashboard() {
+  const { t: localize } = useLanguage();
   const [darkMode, setDarkMode] = useState(false);
   const [mobileToolsOpen, setMobileToolsOpen] = useState(false);
   const [employees, setEmployees] = useState<any[]>([]);
@@ -1000,7 +1003,7 @@ export default function SuperAdminDashboard() {
   if (!healthStatusLoading && !lastArchiveAt) attentionItems.push({ id: 'archive', title: 'No Archive Recorded', description: 'No completed data archival appears in the administrative audit trail.', actionLabel: 'Open archival', action: () => setArchivalModalOpen(true) });
 
   return (
-    <main id="super-admin-dashboard-top" className="dashboard-shell min-h-screen bg-slate-50 p-3 pb-24 transition-colors dark:bg-[#111512] sm:p-4 md:p-6 lg:pb-6 lg:pl-[300px]">
+    <main id="super-admin-dashboard-top" className="dashboard-shell min-h-screen bg-slate-50 p-3 pb-24 transition-colors dark:bg-[#111512] sm:p-4 md:p-6 lg:pb-6 lg:ps-[300px]">
       <SuperAdminDesktopSidebar darkMode={darkMode} email={currentAdminEmail} onToggleTheme={toggleTheme} onLogout={handleLogout} onHome={() => document.getElementById('super-admin-dashboard-top')?.scrollIntoView({ behavior: 'smooth' })} onCreate={openCreateAccountModal} onAccounts={openUserAccountsModal} onAttendance={openAttendanceRecordsModal} onSettings={openAppSettingsModal} onReset={openResetPasswordModal} onAudit={openAuditLogModal} onHealth={openHealthModal} onBackup={() => setBackupModalOpen(true)} onArchive={() => setArchivalModalOpen(true)} />
       <div className="mx-auto max-w-7xl space-y-4 md:space-y-5">
         {/* SUPER ADMIN HEADER — aligned with HR / Employee hierarchy */}
@@ -1012,33 +1015,31 @@ export default function SuperAdminDashboard() {
               </div>
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h1 className="text-base leading-tight text-slate-950 dark:text-white sm:text-lg md:text-xl">Hamdan Studio</h1>
+                  <h1 className="text-base leading-tight text-slate-950 dark:text-white sm:text-lg md:text-xl"><T>{"Hamdan Studio"}</T></h1>
                 </div>
-                <p className="mt-1 text-[11px] font-bold text-green-700 dark:text-green-400">
-                  Super Administrator
-                </p>
-                <p className="mt-0.5 text-[10px] text-slate-500 dark:!text-[#aab8ad]">System & Access Management</p>
+                <p className="mt-1 text-[11px] font-bold text-green-700 dark:text-green-400"><T>{" Super Administrator "}</T></p>
+                <p className="mt-0.5 text-[10px] text-slate-500 dark:!text-[#aab8ad]"><T>{"System & Access Management"}</T></p>
               </div>
             </div>
 
             <div className="flex items-center gap-2 sm:flex-shrink-0">
-              <button type="button" onClick={toggleTheme} className="grid h-11 w-11 place-items-center rounded-full border border-slate-200 text-slate-600 dark:border-slate-700 dark:!text-white" aria-label={darkMode ? 'Use light mode' : 'Use dark mode'}>
+              <button type="button" onClick={toggleTheme} className="grid h-11 w-11 place-items-center rounded-full border border-slate-200 text-slate-600 dark:border-slate-700 dark:!text-white" aria-label={localize(darkMode ? 'Use light mode' : 'Use dark mode')}>
                 {darkMode ? <Sun size={19} /> : <Moon size={19} />}
               </button>
               <button
                 type="button"
                 onClick={openHealthModal}
                 className="relative grid h-11 w-11 place-items-center rounded-full border border-slate-200 text-slate-600 dark:border-slate-700 dark:!text-white"
-                aria-label="Open system health"
+                aria-label={localize("Open system health")}
               >
                 <Activity size={19} />
-                {attentionItems.length > 0 && <span className="absolute right-0.5 top-0.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-orange-500 dark:border-[#202521]" />}
+                {attentionItems.length > 0 && <span className="absolute end-0.5 top-0.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-orange-500 dark:border-[#202521]" />}
               </button>
               <button
                 onClick={() => setMobileToolsOpen(true)}
                 className="grid h-11 w-11 place-items-center rounded-full border border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:!text-white lg:hidden"
                 type="button"
-                aria-label="Open Super Admin menu"
+                aria-label={localize("Open Super Admin menu")}
               >
                 <UserRound size={19} />
               </button>
@@ -1058,64 +1059,62 @@ export default function SuperAdminDashboard() {
           </div>
         )}
 
-        <div className="hidden lg:block"><h2 className="text-xl font-black text-slate-950 dark:text-white">Dashboard</h2><p className="mt-1 text-xs text-slate-500 dark:!text-[#aab8ad]">System overview and administrative control center</p></div>
+        <div className="hidden lg:block"><h2 className="text-xl font-black text-slate-950 dark:text-white"><T>{"Dashboard"}</T></h2><p className="mt-1 text-xs text-slate-500 dark:!text-[#aab8ad]"><T>{"System overview and administrative control center"}</T></p></div>
 
         {/* ADMIN OVERVIEW */}
         <section className="space-y-2.5">
           <div className="flex items-end justify-between gap-3">
             <div>
-              <h2 className="text-xs font-extrabold uppercase tracking-[0.14em] text-slate-600 dark:!text-[#c3d0c5] sm:text-sm">Account Overview</h2>
+              <h2 className="text-xs font-extrabold uppercase tracking-[0.14em] text-slate-600 dark:!text-[#c3d0c5] sm:text-sm"><T>{"Account Overview"}</T></h2>
             </div>
             <button
               type="button"
               onClick={openUserAccountsModal}
               className="text-[9px] font-extrabold text-slate-500 hover:text-slate-900 transition"
-            >
-              View accounts →
-            </button>
+            ><T>{" View accounts → "}</T></button>
           </div>
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
             <button
               type="button"
               onClick={openUserAccountsModal}
-              className="card-style !p-3.5 sm:!p-4 flex min-h-24 items-center gap-3 text-left hover:-translate-y-0.5 transition dark:bg-[#292f2b]"
+              className="card-style !p-3.5 sm:!p-4 flex min-h-24 items-center gap-3 text-start hover:-translate-y-0.5 transition dark:bg-[#292f2b]"
             >
               <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-green-50 text-green-700 dark:bg-green-950/50 dark:text-green-300"><Users size={17}/></span>
               <span className="min-w-0">
                 <span className="stat-number block text-xl leading-none text-green-700 dark:text-green-300 sm:text-2xl">{totalAccounts}</span>
-                <span className="mt-1 block text-[10px] font-extrabold uppercase tracking-wide text-slate-500 dark:text-slate-300 sm:text-[11px]">Total Accounts</span>
+                <span className="mt-1 block text-[10px] font-extrabold uppercase tracking-wide text-slate-500 dark:text-slate-300 sm:text-[11px]"><T>{"Total Accounts"}</T></span>
               </span>
             </button>
 
             <button
               type="button"
               onClick={openUserAccountsModal}
-              className="card-style !p-3.5 sm:!p-4 flex min-h-24 items-center gap-3 text-left hover:-translate-y-0.5 transition dark:bg-[#292f2b]"
+              className="card-style !p-3.5 sm:!p-4 flex min-h-24 items-center gap-3 text-start hover:-translate-y-0.5 transition dark:bg-[#292f2b]"
             >
               <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-teal-50 text-teal-700 dark:bg-teal-950/50 dark:text-teal-300"><UserRound size={17}/></span>
               <span className="min-w-0">
                 <span className="stat-number text-xl sm:text-2xl text-sky-600 block leading-none">{totalEmployeesCount}</span>
-                <span className="mt-1 block text-[10px] font-extrabold uppercase tracking-wide text-slate-500 dark:text-slate-300 sm:text-[11px]">Employees</span>
+                <span className="mt-1 block text-[10px] font-extrabold uppercase tracking-wide text-slate-500 dark:text-slate-300 sm:text-[11px]"><T>{"Employees"}</T></span>
               </span>
             </button>
 
             <button
               type="button"
               onClick={openUserAccountsModal}
-              className="card-style !p-3.5 sm:!p-4 flex min-h-24 items-center gap-3 text-left hover:-translate-y-0.5 transition dark:bg-[#292f2b]"
+              className="card-style !p-3.5 sm:!p-4 flex min-h-24 items-center gap-3 text-start hover:-translate-y-0.5 transition dark:bg-[#292f2b]"
             >
               <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300"><ShieldCheck size={17}/></span>
               <span className="min-w-0">
                 <span className="stat-number block text-xl leading-none text-blue-700 dark:text-blue-300 sm:text-2xl">{totalAdmins}</span>
-                <span className="mt-1 block text-[10px] font-extrabold uppercase tracking-wide text-slate-500 dark:text-slate-300 sm:text-[11px]">HR Admins</span>
+                <span className="mt-1 block text-[10px] font-extrabold uppercase tracking-wide text-slate-500 dark:text-slate-300 sm:text-[11px]"><T>{"HR Admins"}</T></span>
               </span>
             </button>
 
             <button
               type="button"
               onClick={openUserAccountsModal}
-              className="card-style !p-3.5 sm:!p-4 flex min-h-24 items-center gap-3 text-left hover:-translate-y-0.5 transition dark:bg-[#292f2b]"
+              className="card-style !p-3.5 sm:!p-4 flex min-h-24 items-center gap-3 text-start hover:-translate-y-0.5 transition dark:bg-[#292f2b]"
             >
               <span className={`w-9 h-9 rounded-xl flex items-center justify-center text-base flex-shrink-0 ${
                 incompleteProfilesCount ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600'
@@ -1126,13 +1125,13 @@ export default function SuperAdminDashboard() {
                 <span className={`stat-number text-xl sm:text-2xl block leading-none ${
                   incompleteProfilesCount ? 'text-amber-600' : 'text-emerald-600'
                 }`}>{incompleteProfilesCount}</span>
-                <span className="mt-1 block text-[10px] font-extrabold uppercase tracking-wide text-slate-500 dark:text-slate-300 sm:text-[11px]">Incomplete Profiles</span>
+                <span className="mt-1 block text-[10px] font-extrabold uppercase tracking-wide text-slate-500 dark:text-slate-300 sm:text-[11px]"><T>{"Incomplete Profiles"}</T></span>
               </span>
             </button>
           </div>
         </section>
 
-        {attentionItems.length > 0 ? <button type="button" onClick={() => setAttentionModalOpen(true)} className="flex w-full items-center gap-3 rounded-[22px] border border-orange-200 bg-white p-4 text-left shadow-[0_8px_24px_rgba(15,23,42,0.05)] dark:border-orange-900 dark:bg-[#202521]"><span className="grid h-10 w-10 flex-none place-items-center rounded-xl bg-orange-50 text-orange-700 dark:bg-orange-950/50 dark:text-orange-300"><AlertTriangle size={18}/></span><span className="min-w-0 flex-1"><span className="flex items-center justify-between gap-2"><span className="text-sm font-bold text-slate-950 dark:text-white">Needs Attention</span><span className="rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-black text-orange-800 dark:bg-orange-950 dark:text-orange-200">{attentionItems.length}</span></span><span className="mt-1 block truncate text-xs font-semibold text-slate-700 dark:!text-[#e3ece4]">{attentionItems[0].title}</span><span className="mt-0.5 block truncate text-[10px] text-slate-500 dark:!text-[#aab8ad]">{attentionItems[0].description}</span>{attentionItems.length > 1 ? <span className="mt-1 block text-[10px] font-bold text-orange-700 dark:text-orange-300">+{attentionItems.length - 1} more</span> : null}</span><ChevronRight size={18} className="flex-none text-slate-400"/></button> : null}
+        {attentionItems.length > 0 ? <button type="button" onClick={() => setAttentionModalOpen(true)} className="flex w-full items-center gap-3 rounded-[22px] border border-orange-200 bg-white p-4 text-start shadow-[0_8px_24px_rgba(15,23,42,0.05)] dark:border-orange-900 dark:bg-[#202521]"><span className="grid h-10 w-10 flex-none place-items-center rounded-xl bg-orange-50 text-orange-700 dark:bg-orange-950/50 dark:text-orange-300"><AlertTriangle size={18}/></span><span className="min-w-0 flex-1"><span className="flex items-center justify-between gap-2"><span className="text-sm font-bold text-slate-950 dark:text-white"><T>{"Needs Attention"}</T></span><span className="rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-black text-orange-800 dark:bg-orange-950 dark:text-orange-200">{attentionItems.length}</span></span><span className="mt-1 block truncate text-xs font-semibold text-slate-700 dark:!text-[#e3ece4]">{attentionItems[0].title}</span><span className="mt-0.5 block truncate text-[10px] text-slate-500 dark:!text-[#aab8ad]">{attentionItems[0].description}</span>{attentionItems.length > 1 ? <span className="mt-1 block text-[10px] font-bold text-orange-700 dark:text-orange-300">+{attentionItems.length - 1}<T>{" more"}</T></span> : null}</span><ChevronRight size={18} className="flex-none text-slate-400"/></button> : null}
 
         <SuperAdminQuickActions
           onCreateAccount={openCreateAccountModal}
@@ -1145,8 +1144,8 @@ export default function SuperAdminDashboard() {
           onBackup={() => setBackupModalOpen(true)}
         />
         <div className="grid gap-4 xl:grid-cols-[1.3fr_0.7fr]">
-          <button type="button" onClick={openHealthModal} className="rounded-[24px] border border-slate-200 bg-white p-4 text-left shadow-[0_8px_24px_rgba(15,23,42,0.06)] dark:border-slate-700 dark:bg-[#202521]"><div className="flex items-center justify-between gap-3"><div><div className="flex items-center gap-2"><p className="text-base font-semibold text-slate-950 dark:text-white">System Health</p><span className={`rounded-full px-2 py-0.5 text-[9px] font-black ${healthStatusLoading ? 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:!text-white' : lastBackupAt && lastArchiveAt ? 'bg-green-100 text-green-800 dark:bg-green-950 dark:!text-white' : 'bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-200'}`}>{healthStatusLoading ? 'CHECKING' : lastBackupAt && lastArchiveAt ? 'HEALTHY' : 'ATTENTION'}</span></div><p className="mt-0.5 text-xs text-slate-500 dark:!text-[#aab8ad]">Backup, archive, and email delivery</p></div><span className="grid h-10 w-10 place-items-center rounded-xl bg-green-50 text-green-700 dark:bg-green-950/50 dark:text-green-300"><Activity size={18}/></span></div><div className="mt-3 grid grid-cols-2 gap-2"><div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800"><p className="text-[10px] font-bold text-slate-500 dark:!text-[#aab8ad]">Last backup</p><p className="mt-1 text-xs font-bold text-slate-950 dark:text-white">{healthStatusLoading ? 'Checking…' : formatHealthTimestamp(lastBackupAt)}</p></div><div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800"><p className="text-[10px] font-bold text-slate-500 dark:!text-[#aab8ad]">Last archive</p><p className="mt-1 text-xs font-bold text-slate-950 dark:text-white">{healthStatusLoading ? 'Checking…' : formatHealthTimestamp(lastArchiveAt)}</p></div></div></button>
-          <section className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.06)] dark:border-slate-700 dark:bg-[#202521]"><div className="flex items-center justify-between gap-3"><div><p className="text-base font-semibold text-slate-950 dark:text-white">Recent Admin Activity</p><p className="mt-0.5 text-xs text-slate-500 dark:!text-[#aab8ad]">Latest security and configuration events</p></div><Clock3 size={18} className="text-green-700 dark:text-green-300"/></div><div className="mt-3 space-y-1.5">{recentAuditLogs.length ? recentAuditLogs.map((log) => <div key={log.id} className="flex items-start gap-2 rounded-xl bg-slate-50 p-2.5 dark:bg-slate-800"><span className="mt-1 h-2 w-2 flex-none rounded-full bg-green-500"/><span className="min-w-0"><span className="block truncate text-[11px] font-bold text-slate-900 dark:text-white">{auditActionMeta(log.action).label}</span><span className="block truncate text-[9px] text-slate-500 dark:!text-[#aab8ad]">{new Date(log.created_at).toLocaleString('en-US', { timeZone: 'Asia/Riyadh', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span></span></div>) : <p className="rounded-xl bg-slate-50 p-3 text-[10px] text-slate-500 dark:bg-slate-800 dark:!text-[#aab8ad]">No recent administrative activity.</p>}</div><button type="button" onClick={openAuditLogModal} className="mt-2 min-h-11 w-full text-xs font-bold text-green-700 dark:text-green-300">View Audit Log →</button></section>
+          <button type="button" onClick={openHealthModal} className="rounded-[24px] border border-slate-200 bg-white p-4 text-start shadow-[0_8px_24px_rgba(15,23,42,0.06)] dark:border-slate-700 dark:bg-[#202521]"><div className="flex items-center justify-between gap-3"><div><div className="flex items-center gap-2"><p className="text-base font-semibold text-slate-950 dark:text-white"><T>{"System Health"}</T></p><span className={`rounded-full px-2 py-0.5 text-[9px] font-black ${healthStatusLoading ? 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:!text-white' : lastBackupAt && lastArchiveAt ? 'bg-green-100 text-green-800 dark:bg-green-950 dark:!text-white' : 'bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-200'}`}><T>{healthStatusLoading ? 'CHECKING' : lastBackupAt && lastArchiveAt ? 'HEALTHY' : 'ATTENTION'}</T></span></div><p className="mt-0.5 text-xs text-slate-500 dark:!text-[#aab8ad]"><T>{"Backup, archive, and email delivery"}</T></p></div><span className="grid h-10 w-10 place-items-center rounded-xl bg-green-50 text-green-700 dark:bg-green-950/50 dark:text-green-300"><Activity size={18}/></span></div><div className="mt-3 grid grid-cols-2 gap-2"><div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800"><p className="text-[10px] font-bold text-slate-500 dark:!text-[#aab8ad]"><T>{"Last backup"}</T></p><p className="mt-1 text-xs font-bold text-slate-950 dark:text-white"><T>{healthStatusLoading ? 'Checking…' : formatHealthTimestamp(lastBackupAt)}</T></p></div><div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800"><p className="text-[10px] font-bold text-slate-500 dark:!text-[#aab8ad]"><T>{"Last archive"}</T></p><p className="mt-1 text-xs font-bold text-slate-950 dark:text-white"><T>{healthStatusLoading ? 'Checking…' : formatHealthTimestamp(lastArchiveAt)}</T></p></div></div></button>
+          <section className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.06)] dark:border-slate-700 dark:bg-[#202521]"><div className="flex items-center justify-between gap-3"><div><p className="text-base font-semibold text-slate-950 dark:text-white"><T>{"Recent Admin Activity"}</T></p><p className="mt-0.5 text-xs text-slate-500 dark:!text-[#aab8ad]"><T>{"Latest security and configuration events"}</T></p></div><Clock3 size={18} className="text-green-700 dark:text-green-300"/></div><div className="mt-3 space-y-1.5">{recentAuditLogs.length ? recentAuditLogs.map((log) => <div key={log.id} className="flex items-start gap-2 rounded-xl bg-slate-50 p-2.5 dark:bg-slate-800"><span className="mt-1 h-2 w-2 flex-none rounded-full bg-green-500"/><span className="min-w-0"><span className="block truncate text-[11px] font-bold text-slate-900 dark:text-white">{auditActionMeta(log.action).label}</span><span className="block truncate text-[9px] text-slate-500 dark:!text-[#aab8ad]">{new Date(log.created_at).toLocaleString('en-US', { timeZone: 'Asia/Riyadh', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span></span></div>) : <p className="rounded-xl bg-slate-50 p-3 text-[10px] text-slate-500 dark:bg-slate-800 dark:!text-[#aab8ad]"><T>{"No recent administrative activity."}</T></p>}</div><button type="button" onClick={openAuditLogModal} className="mt-2 min-h-11 w-full text-xs font-bold text-green-700 dark:text-green-300"><T>{"View Audit Log →"}</T></button></section>
         </div>
       </div>
 
@@ -1181,7 +1180,7 @@ export default function SuperAdminDashboard() {
 
       {editingLog && <EditAttendanceModal editingLog={editingLog} logSaving={logSaving} saveEditLog={saveEditLog} setEditingLog={setEditingLog} />}
 
-      <VerificationDialog open={Boolean(accountVerification)} title={accountVerification?.deactivate ? 'Deactivate account?' : 'Reactivate account?'} description={accountVerification?.deactivate ? 'The employee will immediately lose login access, while historical records remain intact.' : 'The employee will regain access to the application.'} confirmLabel={accountVerification?.deactivate ? 'Deactivate account' : 'Reactivate account'} tone={accountVerification?.deactivate ? 'danger' : 'primary'} details={accountVerification ? [accountVerification.name, accountVerification.deactivate ? 'Attendance, leave, and payslip history will not be deleted.' : 'Existing account data and permissions will be restored.'] : []} busy={deactivating} onCancel={() => { if (!deactivating) setAccountVerification(null); }} onConfirm={confirmToggleAccountActive} />
+      <VerificationDialog open={Boolean(accountVerification)} title={localize(accountVerification?.deactivate ? 'Deactivate account?' : 'Reactivate account?')} description={accountVerification?.deactivate ? 'The employee will immediately lose login access, while historical records remain intact.' : 'The employee will regain access to the application.'} confirmLabel={accountVerification?.deactivate ? 'Deactivate account' : 'Reactivate account'} tone={accountVerification?.deactivate ? 'danger' : 'primary'} details={accountVerification ? [accountVerification.name, accountVerification.deactivate ? 'Attendance, leave, and payslip history will not be deleted.' : 'Existing account data and permissions will be restored.'] : []} busy={deactivating} onCancel={() => { if (!deactivating) setAccountVerification(null); }} onConfirm={confirmToggleAccountActive} />
 
 
     </main>

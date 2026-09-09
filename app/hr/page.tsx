@@ -1,4 +1,6 @@
 'use client';
+import { T, useLanguage } from '@/components/language/LanguageProvider';
+
 
 import { isWorkingDate } from '@/lib/work-schedule';
 import { applyPortalTheme } from '@/lib/portal-theme';
@@ -64,6 +66,7 @@ const FALLBACK_LATE_CUTOFF_HOUR = 8;
 const FALLBACK_LATE_CUTOFF_MINUTE = 0;
 
 export default function HRDashboard() {
+  const { t: localize } = useLanguage();
   const router = useRouter();
   const { verify, verificationDialog } = useVerificationDialog();
   const [attendance, setAttendance] = useState<AttendanceLog[]>([]);
@@ -145,7 +148,7 @@ export default function HRDashboard() {
 
   const fetchLeaveCreditsOverview = async () => {
     setLeaveCreditsLoading(true);
-    const year = new Date().getFullYear();
+    const year = Number(new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Riyadh' }).format(new Date()).slice(0, 4));
     const [profRes, govRes, creditsRes] = await Promise.all([
       supabase.from('profiles').select('id, full_name, employee_id').eq('role', 'employee').eq('is_active', true).order('full_name'),
       supabase.from('employee_government_ids').select('user_id, employment_status'),
@@ -1047,6 +1050,7 @@ export default function HRDashboard() {
       return;
     }
     setDisputes((data || []) as unknown as AttendanceDispute[]);
+    setSelectedDisputeDetail(current => current ? ((data || []).find(row => row.id === current.id) as unknown as AttendanceDispute ?? null) : null);
     setDisputesLoading(false);
   };
 
@@ -1060,63 +1064,17 @@ export default function HRDashboard() {
     setDisputeActionLoadingId(dispute.id);
     setDisputeMsg(null);
     try {
-      const { data: { user: currentUser } } = await supabase.auth.getUser();
-      const disputeType = dispute.dispute_type || 'TimeIn';
-
-      if (disputeType === 'TimeOut') {
-        // Timeout disputes always reference an existing log (the
-        // employee already timed in that day) -- just correct time_out.
-        // Status (Present/Late) is untouched since that's derived from
-        // time_in only.
-        if (!dispute.attendance_log_id) {
-          throw new Error('This dispute has no linked attendance record to update.');
-        }
-        if (!dispute.claimed_time_out) throw new Error('This dispute has no claimed time-out.');
-        const { error } = await supabase
-          .from('attendance_logs')
-          .update({ time_out: dispute.claimed_time_out })
-          .eq('id', dispute.attendance_log_id);
-        if (error) throw error;
-      } else if (dispute.attendance_log_id) {
-        // Existing (wrongly-tagged) log -- correct its time_in/status.
-        if (!dispute.claimed_time_in) throw new Error('This dispute has no claimed time-in.');
-        const newStatus = computeStatusForTime(dispute.claimed_time_in);
-        const { error } = await supabase
-          .from('attendance_logs')
-          .update({ time_in: dispute.claimed_time_in, status: newStatus })
-          .eq('id', dispute.attendance_log_id);
-        if (error) throw error;
-      } else {
-        // No log existed for that day (forgot to time in) -- create it.
-        // Uses upsert (not insert) because the nightly/on-load absence sweep
-        // may have already filled this date with a placeholder 'Absent' row
-        // (see settle_overdue_absences) -- this overwrites that placeholder
-        // with the real, HR-confirmed time_in/status instead of colliding
-        // with the unique (user_id, log_date) constraint.
-        if (!dispute.claimed_time_in) throw new Error('This dispute has no claimed time-in.');
-        const newStatus = computeStatusForTime(dispute.claimed_time_in);
-        const { data: disputeRow } = await supabase
-          .from('attendance_disputes')
-          .select('user_id')
-          .eq('id', dispute.id)
-          .single();
-
-        const { error } = await supabase.from('attendance_logs').upsert([{
-          user_id: disputeRow?.user_id,
-          log_date: dispute.dispute_date,
-          time_in: dispute.claimed_time_in,
-          status: newStatus,
-        }], { onConflict: 'user_id,log_date' });
-        if (error) throw error;
-      }
-
-      const { error: updateError } = await supabase
-        .from('attendance_disputes')
-        .update({ status: 'Approved', reviewed_at: new Date().toISOString(), reviewed_by: currentUser?.id ?? null })
-        .eq('id', dispute.id);
-      if (updateError) throw updateError;
+      const { error } = await supabase.rpc('review_employee_request', {
+        p_kind: 'dispute', p_id: dispute.id, p_approve: true,
+        p_attendance_status: dispute.claimed_time_in ? computeStatusForTime(dispute.claimed_time_in) : null,
+      });
+      if (error) throw error;
 
       setDisputeMsg({ type: 'success', text: 'Dispute approved and attendance record updated.' });
+      setSelectedDisputeDetail(null);
+      setDisputesHistoryModalOpen(false);
+      setActionCenterOpen(false);
+      setReviewNotice('Dispute approved and attendance record updated.');
       await Promise.all([fetchDisputes(), refreshAllData()]);
     } catch (err: unknown) {
       console.error('Error approving dispute:', err);
@@ -1130,14 +1088,16 @@ export default function HRDashboard() {
     setDisputeActionLoadingId(dispute.id);
     setDisputeMsg(null);
     try {
-      const { data: { user: currentUser } } = await supabase.auth.getUser();
-      const { error } = await supabase
-        .from('attendance_disputes')
-        .update({ status: 'Rejected', reviewed_at: new Date().toISOString(), reviewed_by: currentUser?.id ?? null })
-        .eq('id', dispute.id);
+      const { error } = await supabase.rpc('review_employee_request', {
+        p_kind: 'dispute', p_id: dispute.id, p_approve: false, p_notes: null,
+      });
       if (error) throw error;
 
       setDisputeMsg({ type: 'success', text: 'Dispute rejected.' });
+      setSelectedDisputeDetail(null);
+      setDisputesHistoryModalOpen(false);
+      setActionCenterOpen(false);
+      setReviewNotice('Dispute declined.');
       await fetchDisputes();
     } catch (err: unknown) {
       console.error('Error rejecting dispute:', err);
@@ -1152,13 +1112,14 @@ export default function HRDashboard() {
     setLeaveRequestsLoading(true);
     const { data, error } = await supabase
       .from('leave_requests')
-      .select(`id, leave_type, start_date, end_date, reason, status, hr_notes, created_at, reviewed_at,
+      .select(`id, attachment_path, attachment_name, leave_type, start_date, end_date, reason, status, hr_notes, created_at, reviewed_at,
         employee:profiles!leave_requests_user_id_fkey!inner(full_name, id, is_active),
         reviewer:profiles!leave_requests_reviewed_by_fkey(full_name)`)
       .eq('employee.is_active', true)
       .order('created_at', { ascending: false });
     if (error) { console.error('Error fetching leave requests:', error); }
     setLeaveRequests((data || []) as unknown as LeaveRequest[]);
+    setSelectedLeaveDetail(current => current ? ((data || []).find(row => row.id === current.id) as unknown as LeaveRequest ?? null) : null);
     setLeaveRequestsLoading(false);
   };
 
@@ -1174,28 +1135,16 @@ export default function HRDashboard() {
     setLeaveActionLoadingId(leave.id);
     setLeaveMsg(null);
     try {
-      const { data: { user: currentUser } } = await supabase.auth.getUser();
-      const notes = leaveHrNotes[leave.id]?.trim() || null;
-
-      const { error } = await supabase
-        .from('leave_requests')
-        .update({ status: 'Approved', hr_notes: notes, reviewed_by: currentUser?.id, reviewed_at: new Date().toISOString() })
-        .eq('id', leave.id);
+      const { error } = await supabase.rpc('review_employee_request', {
+        p_kind: 'leave', p_id: leave.id, p_approve: true, p_notes: leaveHrNotes[leave.id]?.trim() || null,
+      });
       if (error) throw error;
 
-      // NOTE: leave credits are NOT deducted here anymore. Approving just
-      // creates one 'Pending' leave_request_days row per weekday in range.
-      // Each day only turns into an actual credit deduction later, once we
-      // can confirm the employee didn't time in that day (see
-      // settle_leave_day / settle_overdue_leave_days in Supabase, called
-      // from the HR and Employee dashboards on load, plus a DB trigger that
-      // fires the moment an employee times in).
-      const { error: genError } = await supabase.rpc('generate_leave_request_days', {
-        p_leave_request_id: leave.id,
-      });
-      if (genError) throw genError;
-
       setLeaveMsg({ type: 'success', text: 'Leave request approved.' });
+      setSelectedLeaveDetail(null);
+      setLeaveHistoryModalOpen(false);
+      setActionCenterOpen(false);
+      setReviewNotice('Leave request approved.');
       await fetchLeaveRequests();
     } catch (err: unknown) {
       console.error('Error approving leave:', err);
@@ -1209,14 +1158,16 @@ export default function HRDashboard() {
     setLeaveActionLoadingId(leave.id);
     setLeaveMsg(null);
     try {
-      const { data: { user: currentUser } } = await supabase.auth.getUser();
-      const notes = leaveHrNotes[leave.id]?.trim() || null;
-      const { error } = await supabase
-        .from('leave_requests')
-        .update({ status: 'Rejected', hr_notes: notes, reviewed_by: currentUser?.id, reviewed_at: new Date().toISOString() })
-        .eq('id', leave.id);
+      const { error } = await supabase.rpc('review_employee_request', {
+        p_kind: 'leave', p_id: leave.id, p_approve: false, p_notes: leaveHrNotes[leave.id]?.trim() || null,
+      });
       if (error) throw error;
+
       setLeaveMsg({ type: 'success', text: 'Leave request rejected.' });
+      setSelectedLeaveDetail(null);
+      setLeaveHistoryModalOpen(false);
+      setActionCenterOpen(false);
+      setReviewNotice('Leave request declined.');
       await fetchLeaveRequests();
     } catch (err: unknown) {
       console.error('Error rejecting leave:', err);
@@ -1228,8 +1179,8 @@ export default function HRDashboard() {
 
   // Converts a UTC ISO timestamp to its Jeddah calendar date
   // ("YYYY-MM-DD"). Comparing this instead of the raw UTC prefix avoids
-  // misfiling records near midnight (PH is UTC+8, so a log_time_in of
-  // "2026-07-05T17:30:00Z" is already July 6 in Jeddah).
+  // misfiling records near midnight (Jeddah is UTC+3, so a log_time_in of
+  // "2026-07-05T21:30:00Z" is already July 6 in Jeddah).
   const toJeddahDateString = (iso: string) =>
     new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Riyadh' }).format(new Date(iso));
 
@@ -1590,7 +1541,7 @@ export default function HRDashboard() {
   // Generate cutoff options: current month ± 3 months, both halves.
   const generateCutoffOptions = () => {
     const options: { value: string; label: string }[] = [];
-    const now = new Date();
+    const now = new Date(`${new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Riyadh' }).format(new Date())}T12:00:00`);
     for (let offset = -3; offset <= 3; offset++) {
       const d = new Date(now.getFullYear(), now.getMonth() + offset, 1);
       const y = d.getFullYear();
@@ -1728,6 +1679,8 @@ export default function HRDashboard() {
   useEffect(() => {
     const interval = setInterval(() => {
       refreshAllData();
+      void fetchDisputes();
+      void fetchLeaveRequests();
     }, 60000);
     return () => clearInterval(interval);
   }, []);
@@ -1888,12 +1841,20 @@ export default function HRDashboard() {
     };
     const channel = supabase
       .channel('hr-incoming-requests')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'attendance_disputes' }, () => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance_disputes' }, (payload) => {
         void fetchDisputes();
+        if (payload.eventType !== 'INSERT') {
+          setIncomingRequestAlert(current => current?.type === 'dispute' ? null : current);
+          return;
+        }
         showIncomingAlert({ type: 'dispute', title: 'New attendance dispute', detail: 'An employee submitted an attendance correction for HR review.' });
       })
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'leave_requests' }, () => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'leave_requests' }, (payload) => {
         void fetchLeaveRequests();
+        if (payload.eventType !== 'INSERT') {
+          setIncomingRequestAlert(current => current?.type === 'leave' ? null : current);
+          return;
+        }
         showIncomingAlert({ type: 'leave', title: 'New leave request', detail: 'An employee submitted a leave request for HR approval.' });
       })
       .subscribe();
@@ -1926,6 +1887,8 @@ export default function HRDashboard() {
     return () => { void supabase.removeChannel(channel); };
   }, [fetchAppSettings]);
 
+  const [reviewNotice, setReviewNotice] = useState<string | null>(null);
+
   const pendingHrActionCount = pendingDisputesCount + pendingLeaveCount + openHrSupportCount;
   const openReports = () => { setExportModalOpen(true); setExportMsg(null); if (!exportCutoff) setExportCutoff(availableCutoffs[0] || ''); };
   const openDocuments = () => { setHrDocumentsModalOpen(true); fetchHrDocuments(); };
@@ -1935,47 +1898,48 @@ export default function HRDashboard() {
   const openAttendanceLog = () => { setAttendanceHistoryOpen(true); scrollToDashboardSection('attendance-history'); };
 
   return (
-    <main id="hr-dashboard-top" className={`dashboard-shell hr-dashboard relative min-h-screen overflow-x-hidden bg-slate-50 p-3 pb-24 text-slate-950 transition-colors dark:bg-[#111512] dark:text-slate-100 sm:p-4 sm:pb-24 md:p-6 lg:py-6 lg:pl-[260px] lg:pr-6 ${seasonalTheme.active ? `seasonal-theme seasonal-${seasonalTheme.variant} seasonal-${seasonalTheme.intensity}` : ''}`}>
+    <main id="hr-dashboard-top" className={`dashboard-shell hr-dashboard relative min-h-screen overflow-x-hidden bg-slate-50 p-3 pb-24 text-slate-950 transition-colors dark:bg-[#111512] dark:text-slate-100 sm:p-4 sm:pb-24 md:p-6 lg:py-6 lg:ps-[260px] lg:pe-6 ${seasonalTheme.active ? `seasonal-theme seasonal-${seasonalTheme.variant} seasonal-${seasonalTheme.intensity}` : ''}`}>
       {seasonalTheme.active && seasonalTheme.snowEnabled ? <SeasonalDecor variant={seasonalTheme.variant} intensity={seasonalTheme.intensity} particle={seasonalPresentation.particle} /> : null}
       <HRDesktopSidebar darkMode={darkMode} leaveRequestCount={pendingLeaveCount} disputeCount={pendingDisputesCount} onDashboard={() => scrollToDashboardSection('hr-dashboard-top')} onAttendance={openAttendanceLog} onEmployees={() => setEmployeesListOpen(true)} onLeave={() => { setSelectedLeaveDetail(null); setLeaveHistoryModalOpen(true); }} onDisputes={() => { setSelectedDisputeDetail(null); setDisputesHistoryModalOpen(true); }} onPayslips={() => setEmployeesListOpen(true)} onDocuments={openDocuments} onAnnouncements={() => setAnnouncementOpen(true)} onHolidays={openHolidays} onReports={openReports} onHelpdesk={openHelpdesk} onToggleTheme={toggleTheme} onLogout={handleLogout} />
       <div className="seasonal-content relative z-[3] max-w-7xl mx-auto space-y-3 sm:space-y-4 md:space-y-5">
         {/* Header */}
         <header className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_4px_18px_rgba(15,23,42,0.05)] dark:border-slate-700 dark:bg-[#292f2b] sm:p-4">
-          <div className="min-w-0"><p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-green-700 dark:text-green-300">Hamdan Studio</p><h1 className="mt-0.5 truncate text-xl font-bold leading-tight text-slate-950 dark:text-white sm:text-2xl">HR Dashboard</h1><p className="mt-1 hidden text-xs text-slate-600 dark:text-slate-300 sm:block">People, attendance, and employee operations.</p></div>
+          <div className="min-w-0"><p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-green-700 dark:text-green-300"><T>{"Hamdan Studio"}</T></p><h1 className="mt-0.5 truncate text-xl font-bold leading-tight text-slate-950 dark:text-white sm:text-2xl"><T>{"HR Dashboard"}</T></h1><p className="mt-1 hidden text-xs text-slate-600 dark:text-slate-300 sm:block"><T>{"People, attendance, and employee operations."}</T></p></div>
           <div className="flex flex-none items-center gap-1.5">
-            <button type="button" onClick={toggleTheme} className="grid h-11 w-11 place-items-center rounded-full border border-slate-200 text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:!text-white dark:hover:bg-slate-800 lg:hidden" aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}>{darkMode ? <Sun size={18}/> : <Moon size={18}/>}</button>
-            <button type="button" onClick={() => setActionCenterOpen(true)} className="relative grid h-11 w-11 place-items-center rounded-full border border-slate-200 text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:!text-white dark:hover:bg-slate-800" aria-label={`Open notifications, ${pendingHrActionCount} pending HR actions`}><Bell size={18}/>{pendingHrActionCount ? <span className="absolute -right-0.5 -top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-red-500 px-1 text-[9px] font-black text-white">{pendingHrActionCount > 9 ? '9+' : pendingHrActionCount}</span> : null}</button>
-            <button type="button" onClick={() => setMobileToolsOpen(true)} className="grid h-11 w-11 place-items-center rounded-full border border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:!text-white lg:hidden" aria-label="Open HR tools"><UserRound size={18}/></button>
+            <button type="button" onClick={toggleTheme} className="grid h-11 w-11 place-items-center rounded-full border border-slate-200 text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:!text-white dark:hover:bg-slate-800 lg:hidden" aria-label={localize(darkMode ? 'Switch to light mode' : 'Switch to dark mode')}>{darkMode ? <Sun size={18}/> : <Moon size={18}/>}</button>
+            <button type="button" onClick={() => setActionCenterOpen(true)} className="relative grid h-11 w-11 place-items-center rounded-full border border-slate-200 text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:!text-white dark:hover:bg-slate-800" aria-label={`Open notifications, ${pendingHrActionCount} pending HR actions`}><Bell size={18}/>{pendingHrActionCount ? <span className="absolute -end-0.5 -top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-red-500 px-1 text-[9px] font-black text-white">{pendingHrActionCount > 9 ? '9+' : pendingHrActionCount}</span> : null}</button>
+            <button type="button" onClick={() => setMobileToolsOpen(true)} className="grid h-11 w-11 place-items-center rounded-full border border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:!text-white lg:hidden" aria-label={localize("Open HR tools")}><UserRound size={18}/></button>
           </div>
         </header>
 
-        {seasonalTheme.active && seasonalTheme.bannerEnabled && dismissedSeasonalBanner !== seasonalTheme.variant ? <section className={`relative overflow-hidden rounded-2xl border border-amber-300/50 bg-gradient-to-r px-4 py-3 text-white shadow-lg ${seasonalPresentation.bannerTone}`} aria-label="Seasonal greeting"><span className="absolute -right-3 -top-5 text-6xl text-white/10" aria-hidden="true">{seasonalPresentation.symbol}</span><div className="flex items-center gap-3"><span className="grid h-9 w-9 flex-none place-items-center rounded-xl bg-white/15 text-lg ring-1 ring-white/20" aria-hidden="true">{seasonalPresentation.symbol}</span><div className="min-w-0 flex-1"><p className="text-[9px] font-black uppercase tracking-[0.18em] text-amber-200">{seasonalPresentation.label}</p><p className="truncate text-sm font-bold text-white">{seasonalPresentation.greeting}</p></div><button type="button" onClick={() => setDismissedSeasonalBanner(seasonalTheme.variant)} className="grid h-9 w-9 flex-none place-items-center rounded-full bg-white/10 text-lg text-white/80 transition hover:bg-white/20" aria-label="Dismiss seasonal greeting">×</button></div></section> : null}
+        {seasonalTheme.active && seasonalTheme.bannerEnabled && dismissedSeasonalBanner !== seasonalTheme.variant ? <section className={`relative overflow-hidden rounded-2xl border border-amber-300/50 bg-gradient-to-r px-4 py-3 text-white shadow-lg ${seasonalPresentation.bannerTone}`} aria-label={localize("Seasonal greeting")}><span className="absolute -end-3 -top-5 text-6xl text-white/10" aria-hidden="true">{seasonalPresentation.symbol}</span><div className="flex items-center gap-3"><span className="grid h-9 w-9 flex-none place-items-center rounded-xl bg-white/15 text-lg ring-1 ring-white/20" aria-hidden="true">{seasonalPresentation.symbol}</span><div className="min-w-0 flex-1"><p className="text-[9px] font-black uppercase tracking-[0.18em] text-amber-200">{seasonalPresentation.label}</p><p className="truncate text-sm font-bold text-white">{seasonalPresentation.greeting}</p></div><button type="button" onClick={() => setDismissedSeasonalBanner(seasonalTheme.variant)} className="grid h-9 w-9 flex-none place-items-center rounded-full bg-white/10 text-lg text-white/80 transition hover:bg-white/20" aria-label={localize("Dismiss seasonal greeting")}>×</button></div></section> : null}
 
-        {incomingRequestAlert ? <div role="status" aria-live="polite" className="fixed inset-x-3 top-3 z-[80] mx-auto flex max-w-md items-center gap-3 rounded-2xl border border-green-300 bg-white p-3 shadow-2xl dark:border-green-800 dark:!bg-[#17231b] sm:left-auto sm:right-5 sm:top-5 sm:mx-0"><span className={`grid h-11 w-11 flex-none place-items-center rounded-2xl text-white shadow ${incomingRequestAlert.type === 'dispute' ? 'bg-gradient-to-br from-orange-500 to-red-700' : 'bg-gradient-to-br from-blue-500 to-indigo-700'}`}>{incomingRequestAlert.type === 'dispute' ? <BadgeAlert size={22} strokeWidth={2.8}/> : <CalendarCheck2 size={22} strokeWidth={2.8}/>}</span><button type="button" onClick={() => { if (incomingRequestAlert.type === 'dispute') { setSelectedDisputeDetail(null); setDisputesHistoryModalOpen(true); } else { setSelectedLeaveDetail(null); setLeaveHistoryModalOpen(true); } setIncomingRequestAlert(null); }} className="min-w-0 flex-1 text-left"><span className="block text-xs font-extrabold text-slate-950 dark:!text-white">{incomingRequestAlert.title}</span><span className="mt-0.5 block text-[10px] leading-relaxed text-slate-600 dark:!text-slate-300">{incomingRequestAlert.detail}</span><span className="mt-1 block text-[10px] font-bold text-green-700 dark:!text-green-300">Tap to review</span></button><button type="button" onClick={() => setIncomingRequestAlert(null)} className="grid h-9 w-9 flex-none place-items-center rounded-full bg-slate-100 text-lg text-slate-600 dark:!bg-[#29362d] dark:!text-white" aria-label="Dismiss notification">×</button></div> : null}
+        {reviewNotice && <div role="status" className="fixed bottom-5 inset-x-4 z-[90] mx-auto max-w-md rounded-2xl bg-green-700 p-4 text-sm font-bold text-white shadow-xl">{reviewNotice}<button type="button" aria-label="Dismiss confirmation" className="float-end ms-4" onClick={() => setReviewNotice(null)}>×</button></div>}
+        {incomingRequestAlert ? <div role="status" aria-live="polite" className="fixed inset-x-3 top-3 z-[80] mx-auto flex max-w-md items-center gap-3 rounded-2xl border border-green-300 bg-white p-3 shadow-2xl dark:border-green-800 dark:!bg-[#17231b] sm:start-auto sm:end-5 sm:top-5 sm:mx-0"><span className={`grid h-11 w-11 flex-none place-items-center rounded-2xl text-white shadow ${incomingRequestAlert.type === 'dispute' ? 'bg-gradient-to-br from-orange-500 to-red-700' : 'bg-gradient-to-br from-blue-500 to-indigo-700'}`}>{incomingRequestAlert.type === 'dispute' ? <BadgeAlert size={22} strokeWidth={2.8}/> : <CalendarCheck2 size={22} strokeWidth={2.8}/>}</span><button type="button" onClick={() => { if (incomingRequestAlert.type === 'dispute') { setSelectedDisputeDetail(null); setDisputesHistoryModalOpen(true); } else { setSelectedLeaveDetail(null); setLeaveHistoryModalOpen(true); } setIncomingRequestAlert(null); }} className="min-w-0 flex-1 text-start"><span className="block text-xs font-extrabold text-slate-950 dark:!text-white">{incomingRequestAlert.title}</span><span className="mt-0.5 block text-[10px] leading-relaxed text-slate-600 dark:!text-slate-300">{incomingRequestAlert.detail}</span><span className="mt-1 block text-[10px] font-bold text-green-700 dark:!text-green-300"><T>{"Tap to review"}</T></span></button><button type="button" onClick={() => setIncomingRequestAlert(null)} className="grid h-9 w-9 flex-none place-items-center rounded-full bg-slate-100 text-lg text-slate-600 dark:!bg-[#29362d] dark:!text-white" aria-label={localize("Dismiss notification")}>×</button></div> : null}
 
         {errorMsg && <div className="p-3 rounded-xl text-xs font-bold bg-red-50 text-red-700">{errorMsg}</div>}
 
         {/* Global employee search + live refresh */}
         <div className="card-style !p-3 flex flex-col sm:flex-row sm:items-center gap-3 relative z-30">
           <div className="relative flex-1 min-w-0">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+            <Search size={16} className="absolute start-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
             <input
               type="search"
               value={globalEmployeeSearch}
               onChange={(e) => setGlobalEmployeeSearch(e.target.value)}
-              placeholder="Search employee name, ID, or designation..."
-              className="input-field !pl-9 !py-2 !text-xs !min-h-0 w-full"
+              placeholder={localize("Search employee name, ID, or designation...")}
+              className="input-field !ps-9 !py-2 !text-xs !min-h-0 w-full"
             />
             {globalEmployeeSearch.trim() && (
-              <div className="absolute left-0 right-0 top-full z-50 mt-2 max-h-72 overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-900">
+              <div className="absolute start-0 end-0 top-full z-50 mt-2 max-h-72 overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-900">
                 {globalEmployeeMatches.length === 0 ? (
-                  <p className="p-4 text-slate-400 text-xs text-center">No matching employee found.</p>
+                  <p className="p-4 text-slate-400 text-xs text-center"><T>{"No matching employee found."}</T></p>
                 ) : globalEmployeeMatches.map((profile) => (
                   <button
                     key={profile.id}
                     type="button"
                     onClick={() => { setQuickViewProfile(profile); setGlobalEmployeeSearch(''); }}
-                    className="flex w-full items-center gap-3 border-b border-slate-100 p-3 text-left transition last:border-0 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
+                    className="flex w-full items-center gap-3 border-b border-slate-100 p-3 text-start transition last:border-0 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
                   >
                     <span className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-[10px] font-bold flex-shrink-0">{initials(profile.full_name)}</span>
                     <span className="min-w-0"><span className="block text-xs font-bold text-slate-900 truncate">{profile.full_name || 'Unknown'}</span><span className="block text-[10px] text-slate-400 truncate">{profile.employee_id || 'No ID'} · {profile.designation || 'No designation'}</span></span>
@@ -1986,33 +1950,32 @@ export default function HRDashboard() {
           </div>
           <div className="flex items-center justify-between sm:justify-end gap-3 flex-shrink-0">
             <span className="text-[10px] text-slate-400 font-medium">
-              <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5" />
-              {lastUpdatedAt ? `Updated ${lastUpdatedAt.toLocaleTimeString('en-US', { timeZone: 'Asia/Riyadh', hour: '2-digit', minute: '2-digit' })}` : 'Loading live data'}
+              <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 me-1.5" />
+              <T>{lastUpdatedAt ? `Updated ${lastUpdatedAt.toLocaleTimeString('en-US', { timeZone: 'Asia/Riyadh', hour: '2-digit', minute: '2-digit' })}` : 'Loading live data'}</T>
             </span>
             <button type="button" onClick={refreshAllData} disabled={refreshing} className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-2 text-[10px] font-bold text-slate-700 transition hover:bg-slate-200 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700">
-              <RefreshCw size={13} className={refreshing ? 'animate-spin' : ''} /> Refresh
-            </button>
+              <RefreshCw size={13} className={refreshing ? 'animate-spin' : ''} /><T>{" Refresh "}</T></button>
           </div>
         </div>
 
         {/* Daily attendance overview */}
-        <section aria-labelledby="daily-overview-title"><div className="mb-3"><h2 id="daily-overview-title" className="text-base font-semibold sm:text-lg">Daily Overview</h2><p className="mt-0.5 text-xs text-slate-500">Today&apos;s attendance at a glance</p></div><div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
+        <section aria-labelledby="daily-overview-title"><div className="mb-3"><h2 id="daily-overview-title" className="text-base font-semibold sm:text-lg"><T>{"Daily Overview"}</T></h2><p className="mt-0.5 text-xs text-slate-500"><T>{"Today's attendance at a glance"}</T></p></div><div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
           {[
             { key: 'present' as const, label: 'Present', value: presentTodayCount, tone: 'from-emerald-500 to-green-600', icon: <CheckCircle2 size={19}/> },
             { key: 'late' as const, label: 'Late', value: lateTodayCount, tone: 'from-amber-400 to-orange-500', icon: <Clock3 size={19}/> },
             { key: 'leave' as const, label: 'On Leave', value: onLeaveTodayCount, tone: 'from-sky-500 to-blue-600', icon: <CalendarClock size={19}/> },
             { key: 'notTimedIn' as const, label: 'Not Timed In', value: notYetTimedInToday.length, tone: 'from-orange-500 to-red-600', icon: <AlertTriangle size={19}/> },
           ].map((stat) => (
-            <button type="button" key={stat.key} onClick={() => setDailyOverviewModal(stat.key)} className="group relative flex min-h-24 items-center gap-3 overflow-hidden rounded-2xl border border-slate-200 bg-white p-3 text-left shadow-[0_6px_20px_rgba(15,23,42,0.05)] transition hover:-translate-y-0.5 hover:shadow-md dark:border-slate-700 dark:bg-[#292f2b]" aria-label={`View ${stat.label} records`}>
+            <button type="button" key={stat.key} onClick={() => setDailyOverviewModal(stat.key)} className="group relative flex min-h-24 items-center gap-3 overflow-hidden rounded-2xl border border-slate-200 bg-white p-3 text-start shadow-[0_6px_20px_rgba(15,23,42,0.05)] transition hover:-translate-y-0.5 hover:shadow-md dark:border-slate-700 dark:bg-[#292f2b]" aria-label={`View ${stat.label} records`}>
               <span className={`relative grid h-11 w-11 flex-none place-items-center rounded-2xl bg-gradient-to-br text-white shadow-md ${stat.tone}`}><span className="absolute inset-[3px] rounded-[13px] border border-white/25"/>{stat.icon}</span>
-              <span className="min-w-0"><span className="stat-number block text-2xl leading-none text-slate-950 dark:text-white">{stat.value}</span><span className="mt-1.5 block text-[11px] font-bold text-slate-600 dark:text-slate-300">{stat.label}</span></span>
+              <span className="min-w-0"><span className="stat-number block text-2xl leading-none text-slate-950 dark:text-white">{stat.value}</span><span className="mt-1.5 block text-[11px] font-bold text-slate-600 dark:text-slate-300"><T>{stat.label}</T></span></span>
               <span className={`absolute inset-x-4 bottom-0 h-0.5 rounded-t-full bg-gradient-to-r ${stat.tone}`} aria-hidden="true" />
             </button>
           ))}
         </div></section>
 
         {/* HR modules keep their existing handlers while sharing one visual language. */}
-        <section aria-labelledby="hr-quick-actions-title"><div className="mb-3"><h2 id="hr-quick-actions-title" className="text-base font-semibold sm:text-lg">HR Quick Actions</h2><p className="mt-0.5 text-xs text-slate-500 dark:text-slate-300">Frequently used people operations tools</p></div><div className="grid grid-cols-3 gap-2 sm:grid-cols-4 sm:gap-3 lg:grid-cols-5">
+        <section aria-labelledby="hr-quick-actions-title"><div className="mb-3"><h2 id="hr-quick-actions-title" className="text-base font-semibold sm:text-lg"><T>{"HR Quick Actions"}</T></h2><p className="mt-0.5 text-xs text-slate-500 dark:text-slate-300"><T>{"Frequently used people operations tools"}</T></p></div><div className="grid grid-cols-3 gap-2 sm:grid-cols-4 sm:gap-3 lg:grid-cols-5">
           {[
             { title: 'Leave Requests', description: pendingLeaveCount ? `${pendingLeaveCount} pending` : 'All clear', icon: CalendarCheck2, tone: 'from-blue-500 to-indigo-700', action: () => { setSelectedLeaveDetail(null); setLeaveHistoryModalOpen(true); }, warning: pendingLeaveCount > 0, count: pendingLeaveCount },
             { title: 'Attendance Disputes', description: pendingDisputesCount ? `${pendingDisputesCount} pending` : 'All clear', icon: BadgeAlert, tone: 'from-orange-500 to-red-700', action: () => { setSelectedDisputeDetail(null); setDisputesHistoryModalOpen(true); }, warning: pendingDisputesCount > 0, count: pendingDisputesCount },
@@ -2024,18 +1987,18 @@ export default function HRDashboard() {
             { title: 'Leave Calendar', description: 'Leaves & holidays', icon: CalendarRange, tone: 'from-violet-500 to-indigo-700', action: openLeaveCalendar },
             { title: 'Help Desk', description: openHrSupportCount ? `${openHrSupportCount} open` : 'All clear', icon: LifeBuoy, tone: 'from-sky-500 to-cyan-700', action: openHelpdesk, warning: openHrSupportCount > 0 },
             { title: 'Documents', description: `${activeHrDocumentsCount} published`, icon: FolderDown, tone: 'from-slate-500 to-slate-800', action: openDocuments },
-          ].map(({ title, description, icon: Icon, tone, action, warning, count }) => <button key={title} type="button" onClick={action} className="group relative flex min-h-28 min-w-0 flex-col items-center justify-center gap-2 overflow-hidden rounded-2xl border border-slate-200 bg-white px-1.5 py-3 text-center shadow-[0_5px_16px_rgba(15,23,42,0.05)] transition hover:-translate-y-0.5 hover:border-green-300 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500 dark:border-slate-700 dark:bg-[#292f2b] dark:hover:border-green-700"><span className={`relative grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-br text-white shadow-lg ring-1 ring-black/10 ${warning ? 'from-amber-500 to-orange-700' : tone}`}><span className="absolute inset-[3px] rounded-[13px] border border-white/35"/><Icon size={24} strokeWidth={3}/>{typeof count === 'number' && count > 0 && <span className="absolute -right-2 -top-2 grid h-6 min-w-6 place-items-center rounded-full border-2 border-white bg-rose-600 px-1 text-[10px] font-black text-white shadow dark:border-[#292f2b]">{count > 99 ? '99+' : count}</span>}</span><span className="line-clamp-2 text-[10px] font-extrabold leading-tight text-slate-900 dark:text-white sm:text-xs">{title}</span><span className={`hidden max-w-full truncate text-[10px] sm:block ${warning ? 'font-bold text-orange-700 dark:text-orange-300' : 'text-slate-500 dark:text-slate-300'}`}>{description}</span><span className={`absolute inset-x-4 bottom-0 h-0.5 rounded-t-full bg-gradient-to-r ${warning ? 'from-amber-500 to-orange-700' : tone}`} aria-hidden="true" /></button>)}
+          ].map(({ title, description, icon: Icon, tone, action, warning, count }) => <button key={title} type="button" onClick={action} className="group relative flex min-h-28 min-w-0 flex-col items-center justify-center gap-2 overflow-hidden rounded-2xl border border-slate-200 bg-white px-1.5 py-3 text-center shadow-[0_5px_16px_rgba(15,23,42,0.05)] transition hover:-translate-y-0.5 hover:border-green-300 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500 dark:border-slate-700 dark:bg-[#292f2b] dark:hover:border-green-700"><span className={`relative grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-br text-white shadow-lg ring-1 ring-black/10 ${warning ? 'from-amber-500 to-orange-700' : tone}`}><span className="absolute inset-[3px] rounded-[13px] border border-white/35"/><Icon size={24} strokeWidth={3}/>{typeof count === 'number' && count > 0 && <span className="absolute -end-2 -top-2 grid h-6 min-w-6 place-items-center rounded-full border-2 border-white bg-rose-600 px-1 text-[10px] font-black text-white shadow dark:border-[#292f2b]">{count > 99 ? '99+' : count}</span>}</span><span className="line-clamp-2 text-[10px] font-extrabold leading-tight text-slate-900 dark:text-white sm:text-xs">{title}</span><span className={`hidden max-w-full truncate text-[10px] sm:block ${warning ? 'font-bold text-orange-700 dark:text-orange-300' : 'text-slate-500 dark:text-slate-300'}`}>{description}</span><span className={`absolute inset-x-4 bottom-0 h-0.5 rounded-t-full bg-gradient-to-r ${warning ? 'from-amber-500 to-orange-700' : tone}`} aria-hidden="true" /></button>)}
         </div></section>
 
         <section className="card-style !p-4">
-          <div className="flex items-start justify-between gap-3"><div><h3 className="text-sm mb-0">Attendance Insights</h3><p className="mt-0.5 text-[10px] text-slate-400">Current-month performance</p></div><button type="button" onClick={() => setAttendanceInsightModal('attendance')} className="inline-flex min-h-11 items-center gap-1 rounded-full px-3 text-xs font-bold text-green-700 hover:bg-green-50 dark:text-green-300">View Insights <ChevronRight size={15}/></button></div>
+          <div className="flex items-start justify-between gap-3"><div><h3 className="text-sm mb-0"><T>{"Attendance Insights"}</T></h3><p className="mt-0.5 text-[10px] text-slate-400"><T>{"Current-month performance"}</T></p></div><button type="button" onClick={() => setAttendanceInsightModal('attendance')} className="inline-flex min-h-11 items-center gap-1 rounded-full px-3 text-xs font-bold text-green-700 hover:bg-green-50 dark:text-green-300"><T>{"View Insights "}</T><ChevronRight size={15}/></button></div>
           <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
             {[
               { key: 'attendance' as const, label: 'Attendance Rate', value: `${attendanceInsights.current.attendanceRate}%`, tone: 'text-emerald-600' },
               { key: 'late' as const, label: 'Late', value: attendanceInsights.current.late, tone: 'text-orange-600' },
               { key: 'absent' as const, label: 'Absent', value: attendanceInsights.current.absent, tone: 'text-rose-600' },
               { key: 'leave' as const, label: 'Leave', value: attendanceInsights.current.leave, tone: 'text-blue-600' },
-            ].map((item) => <button type="button" key={item.key} onClick={() => setAttendanceInsightModal(item.key)} className="min-h-16 rounded-xl border border-slate-100 bg-slate-50 p-2.5 text-left transition hover:bg-white dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700" aria-label={`View ${item.label}`}><p className={`stat-number text-lg leading-none ${item.tone}`}>{item.value}</p><p className="mt-1 text-[10px] font-bold text-slate-600 dark:text-slate-200">{item.label}</p></button>)}
+            ].map((item) => <button type="button" key={item.key} onClick={() => setAttendanceInsightModal(item.key)} className="min-h-16 rounded-xl border border-slate-100 bg-slate-50 p-2.5 text-start transition hover:bg-white dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700" aria-label={`View ${item.label}`}><p className={`stat-number text-lg leading-none ${item.tone}`}>{item.value}</p><p className="mt-1 text-[10px] font-bold text-slate-600 dark:text-slate-200"><T>{item.label}</T></p></button>)}
           </div>
         </section>
 
@@ -2056,14 +2019,14 @@ export default function HRDashboard() {
 
         {/* Attendance Disputes */}
         <section id="attendance-disputes" className="card-style !p-4 scroll-mt-4">
-          <h3 className="mb-3 text-sm">Attendance Disputes</h3>
+          <h3 className="mb-3 text-sm"><T>{"Attendance Disputes"}</T></h3>
           {disputeMsg && <div className={`p-2.5 rounded-xl text-xs font-bold mb-3 ${disputeMsg.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>{disputeMsg.text}</div>}
           <div className="min-h-[160px]">
-          {disputesLoading ? <LoadingRow label="Loading disputes..." /> : (
+          {disputesLoading ? <LoadingRow label={localize("Loading disputes...")} /> : (
             <>
-              <p className="label-branded mb-2">Pending</p>
+              <p className="label-branded mb-2"><T>{"Pending"}</T></p>
               {disputes.filter((d) => d.status === 'Pending').length === 0
-                ? <div className="flex items-center gap-2 p-3 rounded-xl border border-emerald-100 bg-emerald-50/50 text-emerald-700 text-xs font-bold mb-4"><CheckCircle2 size={15}/>All caught up — no pending disputes.</div>
+                ? <div className="flex items-center gap-2 p-3 rounded-xl border border-emerald-100 bg-emerald-50/50 text-emerald-700 text-xs font-bold mb-4"><CheckCircle2 size={15}/><T>{"All caught up — no pending disputes."}</T></div>
                 : <div className="space-y-2 mb-4">
                     {disputes.filter((d) => d.status === 'Pending').map((d) => (
                       <div
@@ -2078,27 +2041,27 @@ export default function HRDashboard() {
                           <div className="min-w-0">
                             <p className="font-bold text-slate-900 text-xs">{d.employee?.full_name ?? 'Unknown'}</p>
                             <p className="text-slate-500 text-xs mt-0.5">{disputeTypeLabel(d)} · <span className="font-medium">{d.dispute_date}</span></p>
-                            {disputeOriginal(d) && <p className="text-slate-400 text-xs">Was: <span className="font-bold text-slate-600">{formatPh(disputeOriginal(d)!)}</span></p>}
-                            {disputeClaimed(d) && <p className="text-slate-400 text-xs">Claimed: <span className="font-bold text-slate-600">{formatPh(disputeClaimed(d)!)}</span></p>}
-                            {d.reason && <p className="text-slate-400 text-[10px] italic mt-0.5">&ldquo;{d.reason}&rdquo;</p>}
+                            {disputeOriginal(d) && <p className="text-slate-400 text-xs"><T>{"Was: "}</T><span className="font-bold text-slate-600">{formatPh(disputeOriginal(d)!)}</span></p>}
+                            {disputeClaimed(d) && <p className="text-slate-400 text-xs"><T>{"Claimed: "}</T><span className="font-bold text-slate-600">{formatPh(disputeClaimed(d)!)}</span></p>}
+                            {d.reason && <p className="text-slate-400 text-[10px] italic mt-0.5"><T>{"&ldquo;"}</T>{d.reason}<T>{"&rdquo;"}</T></p>}
                           </div>
                           <div className="flex gap-1.5 flex-shrink-0">
-                            <button onClick={(e) => { e.stopPropagation(); approveDispute(d); }} disabled={disputeActionLoadingId === d.id} className="text-xs font-bold bg-green-600 text-white px-3 py-1.5 rounded-full hover:bg-green-700 transition disabled:opacity-50">{disputeActionLoadingId === d.id ? '...' : 'Approve'}</button>
-                            <button onClick={(e) => { e.stopPropagation(); rejectDispute(d); }} disabled={disputeActionLoadingId === d.id} className="text-xs font-bold bg-slate-200 text-slate-700 px-3 py-1.5 rounded-full hover:bg-slate-300 transition disabled:opacity-50">Reject</button>
+                            <button onClick={(e) => { e.stopPropagation(); approveDispute(d); }} disabled={disputeActionLoadingId === d.id} className="text-xs font-bold bg-green-600 text-white px-3 py-1.5 rounded-full hover:bg-green-700 transition disabled:opacity-50"><T>{disputeActionLoadingId === d.id ? '...' : 'Approve'}</T></button>
+                            <button onClick={(e) => { e.stopPropagation(); rejectDispute(d); }} disabled={disputeActionLoadingId === d.id} className="text-xs font-bold bg-slate-200 text-slate-700 px-3 py-1.5 rounded-full hover:bg-slate-300 transition disabled:opacity-50"><T>{"Reject"}</T></button>
                           </div>
                         </div>
                       </div>
                     ))}
                   </div>
               }
-              <p className="label-branded mb-2">Resolved</p>
+              <p className="label-branded mb-2"><T>{"Resolved"}</T></p>
               <button
                 type="button"
                 onClick={() => setDisputesHistoryModalOpen(true)}
-                className="w-full flex items-center justify-between gap-2 p-3 bg-slate-50 rounded-xl border border-slate-100 hover:bg-slate-100 transition text-left"
+                className="w-full flex items-center justify-between gap-2 p-3 bg-slate-50 rounded-xl border border-slate-100 hover:bg-slate-100 transition text-start"
               >
-                <span className="text-slate-600 text-xs font-bold">View dispute history</span>
-                <span className="text-slate-400 text-xs">{disputes.filter((d) => d.status !== 'Pending').length} resolved</span>
+                <span className="text-slate-600 text-xs font-bold"><T>{"View dispute history"}</T></span>
+                <span className="text-slate-400 text-xs">{disputes.filter((d) => d.status !== 'Pending').length}<T>{" resolved"}</T></span>
               </button>
             </>
           )}
@@ -2107,14 +2070,14 @@ export default function HRDashboard() {
 
         {/* Leave Requests */}
         <section id="leave-requests" className="card-style !p-4 scroll-mt-4">
-          <h3 className="mb-3 text-sm">Leave Requests</h3>
+          <h3 className="mb-3 text-sm"><T>{"Leave Requests"}</T></h3>
           {leaveMsg && <div className={`p-2.5 rounded-xl text-xs font-bold mb-3 ${leaveMsg.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>{leaveMsg.text}</div>}
           <div className="min-h-[160px]">
-          {leaveRequestsLoading ? <LoadingRow label="Loading leave requests..." /> : (
+          {leaveRequestsLoading ? <LoadingRow label={localize("Loading leave requests...")} /> : (
             <>
-              <p className="label-branded mb-2">Pending</p>
+              <p className="label-branded mb-2"><T>{"Pending"}</T></p>
               {leaveRequests.filter((l) => l.status === 'Pending').length === 0
-                ? <div className="flex items-center gap-2 p-3 rounded-xl border border-emerald-100 bg-emerald-50/50 text-emerald-700 text-xs font-bold mb-4"><CheckCircle2 size={15}/>All caught up — no pending leave requests.</div>
+                ? <div className="flex items-center gap-2 p-3 rounded-xl border border-emerald-100 bg-emerald-50/50 text-emerald-700 text-xs font-bold mb-4"><CheckCircle2 size={15}/><T>{"All caught up — no pending leave requests."}</T></div>
                 : <div className="space-y-2 mb-4">
                     {leaveRequests.filter((l) => l.status === 'Pending').map((l) => (
                       <div
@@ -2128,32 +2091,30 @@ export default function HRDashboard() {
                         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
                           <div className="min-w-0">
                             <p className="font-bold text-slate-900 text-xs">{l.employee?.full_name ?? 'Unknown'}</p>
-                            <p className="text-slate-500 text-xs mt-0.5"><span className="font-semibold">{l.leave_type}</span> · {l.start_date === l.end_date ? l.start_date : `${l.start_date} → ${l.end_date}`} · {countLeaveDays(l.start_date, l.end_date)} chargeable working day{countLeaveDays(l.start_date, l.end_date) === 1 ? '' : 's'}</p>
+                            <p className="text-slate-500 text-xs mt-0.5"><span className="font-semibold">{l.leave_type}</span> · {l.start_date === l.end_date ? l.start_date : `${l.start_date} → ${l.end_date}`} · {countLeaveDays(l.start_date, l.end_date)}<T>{" chargeable working day"}</T><T>{countLeaveDays(l.start_date, l.end_date) === 1 ? '' : 's'}</T></p>
                             {getLeaveBalance(l.employee?.id) !== null && (
-                              <p className={`text-[10px] font-bold mt-1 ${countLeaveDays(l.start_date, l.end_date) > Number(getLeaveBalance(l.employee?.id)) ? 'text-rose-600' : 'text-emerald-600'}`}>
-                                Balance: {getLeaveBalance(l.employee?.id)} → estimated {Number(getLeaveBalance(l.employee?.id)) - countLeaveDays(l.start_date, l.end_date)} after approval
-                              </p>
+                              <p className={`text-[10px] font-bold mt-1 ${countLeaveDays(l.start_date, l.end_date) > Number(getLeaveBalance(l.employee?.id)) ? 'text-rose-600' : 'text-emerald-600'}`}><T>{" Balance: "}</T>{getLeaveBalance(l.employee?.id)}<T>{" → estimated "}</T>{Number(getLeaveBalance(l.employee?.id)) - countLeaveDays(l.start_date, l.end_date)}<T>{" after approval "}</T></p>
                             )}
-                            {l.reason && <p className="text-slate-400 text-[10px] italic mt-0.5">&ldquo;{l.reason}&rdquo;</p>}
+                            {l.reason && <p className="text-slate-400 text-[10px] italic mt-0.5"><T>{"&ldquo;"}</T>{l.reason}<T>{"&rdquo;"}</T></p>}
                             <input type="text" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()} className="input-field !py-1.5 !text-xs !min-h-0 mt-1.5" placeholder="HR notes (optional)..." value={leaveHrNotes[l.id] ?? ''} onChange={(e) => setLeaveHrNotes((prev) => ({ ...prev, [l.id]: e.target.value }))} />
                           </div>
                           <div className="flex gap-1.5 flex-shrink-0">
-                            <button onClick={(e) => { e.stopPropagation(); approveLeave(l); }} disabled={leaveActionLoadingId === l.id} className="text-xs font-bold bg-green-600 text-white px-3 py-1.5 rounded-full hover:bg-green-700 transition disabled:opacity-50">{leaveActionLoadingId === l.id ? '...' : 'Approve'}</button>
-                            <button onClick={(e) => { e.stopPropagation(); rejectLeave(l); }} disabled={leaveActionLoadingId === l.id} className="text-xs font-bold bg-slate-200 text-slate-700 px-3 py-1.5 rounded-full hover:bg-slate-300 transition disabled:opacity-50">Reject</button>
+                            <button onClick={(e) => { e.stopPropagation(); approveLeave(l); }} disabled={leaveActionLoadingId === l.id} className="text-xs font-bold bg-green-600 text-white px-3 py-1.5 rounded-full hover:bg-green-700 transition disabled:opacity-50"><T>{leaveActionLoadingId === l.id ? '...' : 'Approve'}</T></button>
+                            <button onClick={(e) => { e.stopPropagation(); rejectLeave(l); }} disabled={leaveActionLoadingId === l.id} className="text-xs font-bold bg-slate-200 text-slate-700 px-3 py-1.5 rounded-full hover:bg-slate-300 transition disabled:opacity-50"><T>{"Reject"}</T></button>
                           </div>
                         </div>
                       </div>
                     ))}
                   </div>
               }
-              <p className="label-branded mb-2">Resolved</p>
+              <p className="label-branded mb-2"><T>{"Resolved"}</T></p>
               <button
                 type="button"
                 onClick={() => setLeaveHistoryModalOpen(true)}
-                className="w-full flex items-center justify-between gap-2 p-3 bg-slate-50 rounded-xl border border-slate-100 hover:bg-slate-100 transition text-left"
+                className="w-full flex items-center justify-between gap-2 p-3 bg-slate-50 rounded-xl border border-slate-100 hover:bg-slate-100 transition text-start"
               >
-                <span className="text-slate-600 text-xs font-bold">View leave history</span>
-                <span className="text-slate-400 text-xs">{leaveRequests.filter((l) => l.status !== 'Pending').length} resolved</span>
+                <span className="text-slate-600 text-xs font-bold"><T>{"View leave history"}</T></span>
+                <span className="text-slate-400 text-xs">{leaveRequests.filter((l) => l.status !== 'Pending').length}<T>{" resolved"}</T></span>
               </button>
             </>
           )}
@@ -2172,13 +2133,11 @@ export default function HRDashboard() {
               onClick={() => setAttendanceHistoryOpen((v) => !v)}
               className="w-full p-4 flex items-center justify-between gap-2"
             >
-              <h3 className="text-sm mb-0">
-                Raw Attendance Log
-                {cutoffFilter ? <span className="block text-[10px] font-medium text-slate-400 normal-case tracking-normal mt-0.5">Showing {formatCutoffLabel(cutoffFilter)}</span>
-                  : selectedDate && <span className="block text-[10px] font-medium text-slate-400 normal-case tracking-normal mt-0.5">{selectedDate === todayJeddah ? "Today's records" : `Records for ${selectedDate}`}</span>}
+              <h3 className="text-sm mb-0"><T>{" Raw Attendance Log "}</T>{cutoffFilter ? <span className="block text-[10px] font-medium text-slate-400 normal-case tracking-normal mt-0.5"><T>{"Showing "}</T>{formatCutoffLabel(cutoffFilter)}</span>
+                  : selectedDate && <span className="block text-[10px] font-medium text-slate-400 normal-case tracking-normal mt-0.5"><T>{selectedDate === todayJeddah ? "Today's records" : `Records for ${selectedDate}`}</T></span>}
                 {searchTerm && (
                   <span className="block text-[10px] font-bold text-red-600 normal-case tracking-normal mt-0.5">
-                    {formatLateDuration(filteredTotalLateMinutes)} late total{cutoffFilter ? ` (${formatCutoffLabel(cutoffFilter)})` : selectedDate ? ` (${selectedDate})` : ''}
+                    {formatLateDuration(filteredTotalLateMinutes)}<T>{" late total"}</T>{cutoffFilter ? ` (${formatCutoffLabel(cutoffFilter)})` : selectedDate ? ` (${selectedDate})` : ''}
                   </span>
                 )}
               </h3>
@@ -2193,9 +2152,9 @@ export default function HRDashboard() {
             {attendanceHistoryOpen && (
             <>
             <div className="px-4 pb-4 border-b border-slate-100 flex flex-wrap gap-2 items-center">
-              <input className="input-field !py-1.5 !text-xs !min-h-0 w-full sm:w-40" placeholder="Search name..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+              <input className="input-field !py-1.5 !text-xs !min-h-0 w-full sm:w-40" placeholder={localize("Search name...")} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
               <select className="input-field !py-1.5 !text-xs !min-h-0 w-auto" value={selectedCutoffYm} onChange={(e) => handleCutoffMonthChange(e.target.value)}>
-                <option value="">All months</option>
+                <option value=""><T>{"All months"}</T></option>
                 {availableCutoffMonths.map((ym) => <option key={ym} value={ym}>{formatCutoffMonthOnly(ym)}</option>)}
               </select>
               {selectedCutoffYm && (
@@ -2204,48 +2163,44 @@ export default function HRDashboard() {
                     type="button"
                     onClick={() => handleCutoffHalfChange('H1')}
                     className={`px-3 py-1 rounded-full text-[11px] font-bold transition whitespace-nowrap ${selectedCutoffHalf === 'H1' ? 'bg-white shadow text-slate-900' : 'text-slate-400'}`}
-                  >
-                    1st Half
-                  </button>
+                  ><T>{" 1st Half "}</T></button>
                   <button
                     type="button"
                     onClick={() => handleCutoffHalfChange('H2')}
                     className={`px-3 py-1 rounded-full text-[11px] font-bold transition whitespace-nowrap ${selectedCutoffHalf === 'H2' ? 'bg-white shadow text-slate-900' : 'text-slate-400'}`}
-                  >
-                    2nd Half
-                  </button>
+                  ><T>{" 2nd Half "}</T></button>
                 </div>
               )}
               <input type="date" className="input-field !py-1.5 !text-xs !min-h-0 w-auto" value={selectedDate} onChange={(e) => { setSelectedDate(e.target.value); if (e.target.value) setCutoffFilter(''); }} />
               <div className="flex gap-3">
-                {selectedDate !== todayJeddah && <button onClick={() => { setSelectedDate(todayJeddah); setCutoffFilter(''); }} className="text-blue-600 font-bold text-xs whitespace-nowrap">Today</button>}
-                {(selectedDate || cutoffFilter) && <button onClick={() => { setSelectedDate(''); setCutoffFilter(''); }} className="text-slate-400 font-bold text-xs whitespace-nowrap">All</button>}
-                {(searchTerm || selectedDate !== todayJeddah || cutoffFilter) && <button onClick={() => { setSearchTerm(''); setSelectedDate(todayJeddah); setCutoffFilter(''); setAttendancePage(1); }} className="text-rose-500 font-bold text-xs whitespace-nowrap">Reset Filters</button>}
+                {selectedDate !== todayJeddah && <button onClick={() => { setSelectedDate(todayJeddah); setCutoffFilter(''); }} className="text-blue-600 font-bold text-xs whitespace-nowrap"><T>{"Today"}</T></button>}
+                {(selectedDate || cutoffFilter) && <button onClick={() => { setSelectedDate(''); setCutoffFilter(''); }} className="text-slate-400 font-bold text-xs whitespace-nowrap"><T>{"All"}</T></button>}
+                {(searchTerm || selectedDate !== todayJeddah || cutoffFilter) && <button onClick={() => { setSearchTerm(''); setSelectedDate(todayJeddah); setCutoffFilter(''); setAttendancePage(1); }} className="text-rose-500 font-bold text-xs whitespace-nowrap"><T>{"Reset Filters"}</T></button>}
               </div>
             </div>
-            <div className="min-h-[260px] max-w-full overflow-x-auto overscroll-x-contain" role="region" aria-label="Scrollable raw attendance records" tabIndex={0}>
-              <table className="w-full min-w-[680px] text-left">
+            <div className="min-h-[260px] max-w-full overflow-x-auto overscroll-x-contain" role="region" aria-label={localize("Scrollable raw attendance records")} tabIndex={0}>
+              <table className="w-full min-w-[680px] text-start">
                 <thead className="bg-slate-50 text-[10px] text-slate-400 font-bold uppercase tracking-widest">
                   <tr>
-                    <th className="px-4 py-3">Employee</th>
-                    <th className="px-4 py-3">Date</th>
-                    <th className="px-4 py-3">Time In</th>
-                    <th className="px-4 py-3">Time Out</th>
-                    <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3"><T>{"Employee"}</T></th>
+                    <th className="px-4 py-3"><T>{"Date"}</T></th>
+                    <th className="px-4 py-3"><T>{"Time In"}</T></th>
+                    <th className="px-4 py-3"><T>{"Time Out"}</T></th>
+                    <th className="px-4 py-3"><T>{"Status"}</T></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {loadingData && attendance.length === 0 && <tr><td colSpan={5} className="px-4 py-6"><LoadingRow label="Loading..." /></td></tr>}
+                  {loadingData && attendance.length === 0 && <tr><td colSpan={5} className="px-4 py-6"><LoadingRow label={localize("Loading...")} /></td></tr>}
                   {paginatedAttendance.map((log) => (
                     <tr key={log.id} className="hover:bg-slate-50 transition">
                       <td className="px-4 py-3 font-medium text-slate-900 text-xs">{log.profiles?.full_name}</td>
-                      <td className="px-4 py-3 text-slate-600 text-xs">{log.log_date ? new Date(log.log_date).toLocaleDateString('en-US', { timeZone: 'Asia/Riyadh', month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}</td>
-                      <td className="px-4 py-3 text-slate-600 text-xs">{log.time_in ? new Date(log.time_in).toLocaleTimeString('en-US', { timeZone: 'Asia/Riyadh', hour: '2-digit', minute: '2-digit', second: '2-digit' }) : 'N/A'}</td>
+                      <td className="px-4 py-3 text-slate-600 text-xs"><T>{log.log_date ? new Date(log.log_date).toLocaleDateString('en-US', { timeZone: 'Asia/Riyadh', month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}</T></td>
+                      <td className="px-4 py-3 text-slate-600 text-xs"><T>{log.time_in ? new Date(log.time_in).toLocaleTimeString('en-US', { timeZone: 'Asia/Riyadh', hour: '2-digit', minute: '2-digit', second: '2-digit' }) : 'N/A'}</T></td>
                       <td className="px-4 py-3 text-slate-600 text-xs">{log.time_out ? new Date(log.time_out).toLocaleTimeString('en-US', { timeZone: 'Asia/Riyadh', hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—'}</td>
                       <td className="px-4 py-3"><span className={statusTagClass(log.status)}>{log.status}</span></td>
                     </tr>
                   ))}
-                  {!loadingData && filteredAttendance.length === 0 && <tr><td colSpan={5} className="px-4 py-6 text-center text-slate-400 text-xs">No attendance records found.</td></tr>}
+                  {!loadingData && filteredAttendance.length === 0 && <tr><td colSpan={5} className="px-4 py-6 text-center text-slate-400 text-xs"><T>{"No attendance records found."}</T></td></tr>}
                 </tbody>
               </table>
               {filteredAttendance.length > PAGE_SIZE && (
@@ -2255,18 +2210,14 @@ export default function HRDashboard() {
                     onClick={() => setAttendancePage((p) => Math.max(1, p - 1))}
                     disabled={attendancePage === 1}
                     className="text-xs font-bold text-blue-600 disabled:text-slate-300 disabled:cursor-not-allowed"
-                  >
-                    ← Prev
-                  </button>
-                  <span className="text-slate-400 text-[10px] font-medium">Page {attendancePage} of {attendanceTotalPages} · {filteredAttendance.length} records</span>
+                  ><T>{" ← Prev "}</T></button>
+                  <span className="text-slate-400 text-[10px] font-medium"><T>{"Page "}</T>{attendancePage}<T>{" of "}</T>{attendanceTotalPages} · {filteredAttendance.length}<T>{" records"}</T></span>
                   <button
                     type="button"
                     onClick={() => setAttendancePage((p) => Math.min(attendanceTotalPages, p + 1))}
                     disabled={attendancePage === attendanceTotalPages}
                     className="text-xs font-bold text-blue-600 disabled:text-slate-300 disabled:cursor-not-allowed"
-                  >
-                    Next →
-                  </button>
+                  ><T>{" Next → "}</T></button>
                 </div>
               )}
             </div>

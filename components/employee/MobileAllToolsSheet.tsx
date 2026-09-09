@@ -1,4 +1,7 @@
 'use client';
+import LanguageSetting from '@/components/language/LanguageSetting';
+import { T, useLanguage } from '@/components/language/LanguageProvider';
+
 
 import { useEffect } from 'react';
 import Image from 'next/image';
@@ -52,6 +55,7 @@ type Props = {
 };
 
 export default function MobileAllToolsSheet(props: Props) {
+  const { t: localize } = useLanguage();
   useEffect(() => {
     if (!props.open) return;
     const previousOverflow = document.body.style.overflow;
@@ -99,19 +103,19 @@ export default function MobileAllToolsSheet(props: Props) {
 
   return (
     <div className="fixed inset-0 z-[70] lg:hidden" role="dialog" aria-modal="true" aria-labelledby="mobile-all-tools-title">
-      <button type="button" className="absolute inset-0 bg-slate-950/45 backdrop-blur-[2px]" onClick={props.onClose} aria-label="Close all tools" />
+      <button type="button" className="absolute inset-0 bg-slate-950/45 backdrop-blur-[2px]" onClick={props.onClose} aria-label={localize("Close all tools")} />
       <section className="absolute inset-x-0 bottom-0 max-h-[88dvh] overflow-y-auto rounded-t-3xl border-t border-slate-200 bg-white px-4 pt-3 shadow-2xl transition-colors duration-150 dark:border-[#465049] dark:bg-[#292f2b]" style={{ paddingBottom: 'max(1.25rem, env(safe-area-inset-bottom))' }}>
         <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-slate-200" aria-hidden="true" />
         <div className="mb-4 flex items-center justify-between gap-3">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-green-700">Employee Menu</p>
-            <h2 id="mobile-all-tools-title" className="text-lg font-bold text-slate-900">Account & Tools</h2>
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-green-700"><T>{"Employee Menu"}</T></p>
+            <h2 id="mobile-all-tools-title" className="text-lg font-bold text-slate-900"><T>{"Account & Tools"}</T></h2>
           </div>
-          <button type="button" onClick={props.onClose} className="grid h-11 w-11 place-items-center rounded-full bg-slate-100 text-slate-600" aria-label="Close all tools">
+          <button type="button" onClick={props.onClose} className="grid h-11 w-11 place-items-center rounded-full bg-slate-100 text-slate-600" aria-label={localize("Close all tools")}>
             <X size={19} />
           </button>
         </div>
-        <section className="mb-5 rounded-2xl border border-slate-200 bg-slate-50 p-3 text-left dark:bg-[#343b36]">
+        <section className="mb-5 rounded-2xl border border-slate-200 bg-slate-50 p-3 text-start dark:bg-[#343b36]">
           <div className="flex min-h-14 items-center gap-3">
             <span className="grid h-12 w-12 flex-none place-items-center overflow-hidden rounded-full bg-white text-slate-500 dark:bg-[#292f2b]">
               {props.avatarUrl ? <Image src={props.avatarUrl} alt="" width={48} height={48} className="h-full w-full object-cover" /> : <UserRound size={20} />}
@@ -122,37 +126,35 @@ export default function MobileAllToolsSheet(props: Props) {
             </span>
           </div>
         </section>
-        <h3 className="mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">All Tools</h3>
+        <h3 className="mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500"><T>{"All Tools"}</T></h3>
         <div className="grid grid-cols-4 gap-2 sm:gap-3">
           {tools.map(({ label, icon: Icon, action, disabled }, index) => (
             <button key={label} type="button" onClick={() => runTool(action)} disabled={disabled} className="group relative flex min-h-24 min-w-0 flex-col items-center justify-center gap-2 overflow-hidden rounded-2xl border border-slate-200 bg-white px-1.5 py-3 text-center shadow-[0_5px_16px_rgba(15,23,42,0.06)] transition duration-200 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45 dark:bg-[#303632]">
-              <span className="absolute -right-4 -top-4 h-12 w-12 rounded-full bg-green-100/60 transition-transform group-active:scale-125 dark:bg-green-900/20" aria-hidden="true" />
+              <span className="absolute -end-4 -top-4 h-12 w-12 rounded-full bg-green-100/60 transition-transform group-active:scale-125 dark:bg-green-900/20" aria-hidden="true" />
               <span className={`relative grid h-11 w-11 place-items-center rounded-2xl bg-gradient-to-br text-white shadow-md ${toolTones[index % toolTones.length]}`}>
                 <span className="absolute inset-[3px] rounded-[13px] border border-white/25" aria-hidden="true" />
                 <Icon size={20} strokeWidth={2.2} aria-hidden="true" />
               </span>
-              <span className="relative line-clamp-2 min-h-7 w-full text-[10px] font-bold leading-tight text-slate-800 dark:text-slate-100 sm:text-[11px]">{label}</span>
+              <span className="relative line-clamp-2 min-h-7 w-full text-[10px] font-bold leading-tight text-slate-800 dark:text-slate-100 sm:text-[11px]"><T>{label}</T></span>
             </button>
           ))}
         </div>
         <div className="mt-5 border-t border-slate-200 pt-4">
-          <h3 className="mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Appearance & Account</h3>
-          <button type="button" onClick={props.onToggleTheme} className="flex min-h-14 w-full items-center gap-3 rounded-xl px-3 text-left transition-colors duration-150 hover:bg-slate-50 dark:hover:bg-[#343b36]" aria-label={props.darkMode ? 'Switch to light mode' : 'Switch to dark mode'}>
+          <h3 className="mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500"><T>{"Appearance & Account"}</T></h3>
+          <LanguageSetting /><button type="button" onClick={props.onToggleTheme} className="flex min-h-14 w-full items-center gap-3 rounded-xl px-3 text-start transition-colors duration-150 hover:bg-slate-50 dark:hover:bg-[#343b36]" aria-label={localize(props.darkMode ? 'Switch to light mode' : 'Switch to dark mode')}>
             <span className="grid h-10 w-10 flex-none place-items-center rounded-xl bg-green-50 text-green-700 dark:bg-[#263b2f] dark:text-[#8ee6a7]">
               {props.darkMode ? <Sun size={18} /> : <Moon size={18} />}
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-sm font-semibold text-slate-900">Appearance</span>
-              <span className="block text-xs text-slate-500">{props.darkMode ? 'Dark Mode' : 'Light Mode'}</span>
+              <span className="block text-sm font-semibold text-slate-900"><T>{"Appearance"}</T></span>
+              <span className="block text-xs text-slate-500"><T>{props.darkMode ? 'Dark Mode' : 'Light Mode'}</T></span>
             </span>
             <span className={`relative h-6 w-11 rounded-full transition-colors duration-150 ${props.darkMode ? 'bg-green-600' : 'bg-slate-300'}`} aria-hidden="true">
               <span className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow-sm transition-transform duration-150 ${props.darkMode ? 'translate-x-6' : 'translate-x-1'}`} />
             </span>
           </button>
           <button type="button" onClick={() => runTool(props.onLogout)} className="mt-1 flex min-h-12 w-full items-center gap-3 rounded-xl px-3 text-sm font-semibold text-red-700 transition-colors duration-150 hover:bg-red-50 dark:text-red-300 dark:hover:bg-[#44292b]">
-            <LogOut size={18} aria-hidden="true" />
-            Log Out
-          </button>
+            <LogOut size={18} aria-hidden="true" /><T>{" Log Out "}</T></button>
         </div>
       </section>
     </div>
