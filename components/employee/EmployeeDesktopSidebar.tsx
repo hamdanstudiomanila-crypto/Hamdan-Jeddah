@@ -1,5 +1,4 @@
 'use client';
-import LanguageSetting from '@/components/language/LanguageSetting';
 import { T, useLanguage } from '@/components/language/LanguageProvider';
 import Image from 'next/image';
 import {
@@ -68,7 +67,7 @@ export default function EmployeeDesktopSidebar(props: Props) {
           </button>
         ))}
       </nav>
-      <LanguageSetting /><button type="button" onClick={props.onToggleTheme} className="mt-3 flex min-h-11 items-center gap-3 rounded-xl border border-slate-200 px-3 text-sm font-medium text-slate-600 hover:bg-slate-50 dark:hover:bg-[#343b36]" aria-label={localize(props.darkMode ? 'Switch to light mode' : 'Switch to dark mode')}>
+      <button type="button" onClick={props.onToggleTheme} className="mt-3 flex min-h-11 items-center gap-3 rounded-xl border border-slate-200 px-3 text-sm font-medium text-slate-600 hover:bg-slate-50 dark:hover:bg-[#343b36]" aria-label={localize(props.darkMode ? 'Switch to light mode' : 'Switch to dark mode')}>
         {props.darkMode ? <Sun size={18} /> : <Moon size={18} />}
         <T>{props.darkMode ? 'Light Mode' : 'Dark Mode'}</T>
       </button>

@@ -1,5 +1,4 @@
 'use client';
-import LanguageSetting from '@/components/language/LanguageSetting';
 import { T, useLanguage } from '@/components/language/LanguageProvider';
 
 
@@ -141,7 +140,7 @@ export default function MobileAllToolsSheet(props: Props) {
         </div>
         <div className="mt-5 border-t border-slate-200 pt-4">
           <h3 className="mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500"><T>{"Appearance & Account"}</T></h3>
-          <LanguageSetting /><button type="button" onClick={props.onToggleTheme} className="flex min-h-14 w-full items-center gap-3 rounded-xl px-3 text-start transition-colors duration-150 hover:bg-slate-50 dark:hover:bg-[#343b36]" aria-label={localize(props.darkMode ? 'Switch to light mode' : 'Switch to dark mode')}>
+          <button type="button" onClick={props.onToggleTheme} className="flex min-h-14 w-full items-center gap-3 rounded-xl px-3 text-start transition-colors duration-150 hover:bg-slate-50 dark:hover:bg-[#343b36]" aria-label={localize(props.darkMode ? 'Switch to light mode' : 'Switch to dark mode')}>
             <span className="grid h-10 w-10 flex-none place-items-center rounded-xl bg-green-50 text-green-700 dark:bg-[#263b2f] dark:text-[#8ee6a7]">
               {props.darkMode ? <Sun size={18} /> : <Moon size={18} />}
             </span>

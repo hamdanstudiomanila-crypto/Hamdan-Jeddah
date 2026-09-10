@@ -1,22 +1,12 @@
-'use client';
+"use client";
 
-import { useId } from 'react';
-import { Languages } from 'lucide-react';
 import { useLanguage } from './LanguageProvider';
-import { normalizeLanguage } from '@/lib/i18n';
 
-export default function LanguageSetting() {
-  const { language, setLanguage, t } = useLanguage();
-  const id = useId();
-  return <div className="my-3 rounded-xl border border-slate-200 bg-white p-3 text-start dark:border-slate-600 dark:bg-[#292f2b]">
-    <label htmlFor={id} className="mb-2 flex items-center gap-2 text-xs font-bold text-slate-800 dark:text-white">
-      <Languages size={16} aria-hidden="true" />{t('Display language')}
-    </label>
-    <select id={id} value={language} onChange={event => setLanguage(normalizeLanguage(event.target.value))}
-      className="min-h-11 w-full rounded-lg border border-slate-300 bg-white px-2 text-sm text-slate-900 focus-visible:outline-2 focus-visible:outline-green-600 dark:border-slate-600 dark:bg-[#202521] dark:text-white">
-      <option value="en" lang="en" dir="ltr">English</option>
-      <option value="ar" lang="ar" dir="rtl">العربية</option>
-    </select>
-    <p className="mt-2 text-[10px] leading-relaxed text-slate-500 dark:text-slate-300">{t('Saved on this browser')}</p>
+export default function LanguageSetting({ disabled = false }: { disabled?: boolean }) {
+  const { language, setLanguage } = useLanguage();
+  return <div role="group" aria-label="Display language" dir="ltr" className="flex items-center gap-1 text-sm font-bold">
+    <button type="button" lang="en" aria-label="English" aria-pressed={language === 'en'} disabled={disabled} onClick={() => setLanguage('en')} className={`min-h-11 min-w-11 rounded-xl px-2 transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-600 disabled:opacity-50 ${language === 'en' ? 'text-slate-950 dark:bg-white/5 dark:text-white' : 'text-slate-400 hover:text-slate-700 dark:hover:text-white'}`}>EN</button>
+    <span aria-hidden="true" className="text-slate-300 dark:text-slate-500">|</span>
+    <button type="button" lang="ar" aria-label="Arabic" aria-pressed={language === 'ar'} disabled={disabled} onClick={() => setLanguage('ar')} className={`min-h-11 min-w-11 rounded-xl px-2 transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-600 disabled:opacity-50 ${language === 'ar' ? 'text-slate-950 dark:bg-white/5 dark:text-white' : 'text-slate-400 hover:text-slate-700 dark:hover:text-white'}`}>{'\u0639\u0631\u0628\u064a'}</button>
   </div>;
 }

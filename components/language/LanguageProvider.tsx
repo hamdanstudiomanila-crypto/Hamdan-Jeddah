@@ -5,25 +5,27 @@ import { LANGUAGE_STORAGE_KEY, normalizeLanguage, translate, type Language } fro
 
 const listeners = new Set<() => void>();
 let currentLanguage: Language | undefined;
+const SESSION_LANGUAGE_KEY = `${LANGUAGE_STORAGE_KEY}.session`;
 function getSnapshot(): Language {
   if (currentLanguage !== undefined) return currentLanguage;
-  try { return normalizeLanguage(localStorage.getItem(LANGUAGE_STORAGE_KEY)); }
+  try {
+    const saved = sessionStorage.getItem(SESSION_LANGUAGE_KEY) ?? localStorage.getItem(LANGUAGE_STORAGE_KEY);
+    currentLanguage = normalizeLanguage(saved);
+    sessionStorage.setItem(SESSION_LANGUAGE_KEY, currentLanguage);
+    return currentLanguage;
+  }
   catch { return 'en'; }
 }
 function emit() { listeners.forEach(listener => listener()); }
 function subscribe(listener: () => void) {
   listeners.add(listener);
-  const onStorage = (event: StorageEvent) => {
-    if (event.key !== LANGUAGE_STORAGE_KEY && event.key !== null) return;
-    currentLanguage = normalizeLanguage(event.newValue);
-    emit();
-  };
-  window.addEventListener('storage', onStorage);
-  return () => { listeners.delete(listener); window.removeEventListener('storage', onStorage); };
+  // A language choice in another tab must not change an open dashboard.
+  return () => { listeners.delete(listener); };
 }
 function setLanguage(language: Language) {
+  if (window.location.pathname !== "/") return;
   currentLanguage = normalizeLanguage(language);
-  try { localStorage.setItem(LANGUAGE_STORAGE_KEY, currentLanguage); } catch { /* Keep the choice for this session. */ }
+  try { sessionStorage.setItem(SESSION_LANGUAGE_KEY, currentLanguage); localStorage.setItem(LANGUAGE_STORAGE_KEY, currentLanguage); } catch { /* Keep the choice for this session. */ }
   emit();
 }
 const getServerSnapshot = (): Language => 'en';

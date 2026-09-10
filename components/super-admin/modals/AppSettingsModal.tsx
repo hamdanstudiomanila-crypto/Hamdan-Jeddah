@@ -1,5 +1,4 @@
 'use client';
-import LanguageSetting from '@/components/language/LanguageSetting';
 import { T, useLanguage } from '@/components/language/LanguageProvider';
 
 
@@ -62,7 +61,7 @@ export default function AppSettingsModal({ open, onClose, appSettings, savedAppS
 
   return <ModalShell open={open} onClose={requestClose} title={localize("App Settings")} description={localize("Configure global application settings")} icon={<Settings size={20}/>} size="sm" placement="right" closeDisabled={appSettingsSaving} footer={footer}>
     <div className="relative mb-4"><Search size={15} className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-slate-400"/><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={localize("Search settings…")} className="input-field !min-h-11 !ps-9 text-xs"/></div>
-	    <LanguageSetting />
+
     {appSettingsMsg ? <div role="status" className={`mb-4 rounded-xl border p-3 text-xs font-bold ${appSettingsMsg.type === 'success' ? 'border-green-200 bg-green-50 text-green-800 dark:border-green-800 dark:bg-green-950/50 dark:!text-white' : 'border-red-200 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-950/50 dark:!text-white'}`}>{appSettingsMsg.text}</div> : null}
 	    {category === 'seasonal' && !query ? <div className={`mb-4 rounded-2xl bg-gradient-to-br p-4 text-white ${seasonalPresentation.bannerTone}`}><div className="flex items-center justify-between gap-2"><span className="text-xs font-black uppercase tracking-wider">{seasonalPresentation.label}<T>{" preview"}</T></span><span className={`rounded-full px-2 py-1 text-[9px] font-black ${seasonalPreview.status === 'active' ? 'bg-green-400 text-green-950' : seasonalPreview.status === 'scheduled' ? 'bg-amber-300 text-amber-950' : 'bg-white/15 text-white'}`}>{seasonalPreview.status.toUpperCase()}</span></div><p className="mt-2 text-[10px] text-white/75"><T>{seasonalPreview.scope === 'employee_and_hr' ? 'Employee and HR portals' : 'Employee portal'}</T> · {seasonalPreview.intensity}<T>{" intensity"}</T></p><p className="mt-1 text-[9px] text-white/60"><T>{"This visual layer preserves portal workflows and warning states."}</T></p></div> : null}
     {appSettingsLoading ? <div className="py-12 text-center text-sm text-slate-500 dark:!text-[#aab8ad]"><T>{"Loading settings…"}</T></div> : showOverview ? <>

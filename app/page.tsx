@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import Image from 'next/image';
@@ -13,8 +13,28 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+
+  useEffect(() => {
+    let active = true;
+    async function resumeSession() {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!active) return;
+        if (user) {
+          const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+          if (!active) return;
+          const destination = profile?.role === 'super_admin' ? '/super-admin' : profile?.role === 'admin' ? '/hr' : profile?.role === 'employee' ? '/employee' : null;
+          if (destination) { router.replace(destination); return; }
+        }
+      } catch { /* Allow a fresh login if the saved session cannot be read. */ }
+      if (active) setCheckingSession(false);
+    }
+    void resumeSession().catch(() => { if (active) setCheckingSession(false); });
+    return () => { active = false; };
+  }, [router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,7 +95,7 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="relative min-h-screen flex flex-col items-center justify-center p-6 bg-gray-50">
+    <main className="relative min-h-screen flex flex-col items-center justify-center p-6 bg-gray-50 dark:bg-[#142019]">
 
       {/* BACKGROUND IMAGE */}
       <div className="fixed inset-0 z-0">
@@ -89,17 +109,18 @@ export default function LoginPage() {
       </div>
 
       {/* LARGE TITLE BOX */}
-      <div className="relative z-10 bg-white/95 px-6 py-8 sm:px-12 sm:py-10 rounded-3xl shadow-2xl border border-gray-100 mb-8 text-center max-w-2xl w-full">
-        <h1 className="text-2xl sm:text-4xl md:text-6xl font-black text-gray-900 tracking-tight md:tracking-tighter leading-tight break-words">
+      <div className="relative z-10 bg-white/95 dark:bg-[#19251e] dark:border-white/10 px-6 py-8 sm:px-12 sm:py-10 rounded-3xl shadow-2xl border border-gray-100 mb-8 text-center max-w-2xl w-full">
+        <h1 className="text-2xl sm:text-4xl md:text-6xl font-black text-gray-900 dark:text-white tracking-tight md:tracking-tighter leading-tight break-words">
           Hamdan Studio
         </h1>
 
       </div>
 
       {/* LOGIN CARD */}
-      <div className="relative z-10 w-full max-w-lg bg-white p-6 sm:p-12 rounded-3xl shadow-2xl border border-gray-100">
-        <div className="text-center mb-8 sm:mb-10">
-            <h2 className="text-xl sm:text-2xl font-black text-gray-900"><T>Employee Login</T></h2>
+      <div className="relative z-10 w-full max-w-lg bg-white dark:bg-[#19251e] dark:border-white/10 p-6 sm:p-12 rounded-3xl shadow-2xl border border-gray-100">
+        <div className="absolute right-4 top-3 sm:right-6 sm:top-4"><LanguageSetting disabled={loading || checkingSession} /></div>
+        <div className="text-center mb-8 mt-8 sm:mb-10">
+            <h2 className="text-xl sm:text-2xl font-black text-gray-900 dark:text-white"><T>Employee Login</T></h2>
         </div>
 
         {error && (
@@ -117,7 +138,7 @@ export default function LoginPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3.5 sm:px-6 sm:py-4 rounded-2xl border border-gray-200 focus:ring-4 focus:ring-blue-600/20 outline-none transition bg-gray-50 text-base sm:text-lg"
+              className="w-full px-4 py-3.5 sm:px-6 sm:py-4 rounded-2xl border border-gray-200 focus:ring-4 focus:ring-blue-600/20 outline-none transition bg-gray-50 dark:bg-white/5 dark:border-white/10 dark:text-white text-base sm:text-lg"
             />
           </div>
 
@@ -129,13 +150,13 @@ export default function LoginPage() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3.5 sm:px-6 sm:py-4 rounded-2xl border border-gray-200 focus:ring-4 focus:ring-blue-600/20 outline-none transition bg-gray-50 text-base sm:text-lg"
+              className="w-full px-4 py-3.5 sm:px-6 sm:py-4 rounded-2xl border border-gray-200 focus:ring-4 focus:ring-blue-600/20 outline-none transition bg-gray-50 dark:bg-white/5 dark:border-white/10 dark:text-white text-base sm:text-lg"
             />
           </div>
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || checkingSession}
             className="btn-primary"
           >
             {loading ? (
@@ -146,7 +167,7 @@ export default function LoginPage() {
             ) : t('Sign In')}
           </button>
         </form>
-        <LanguageSetting />
+
       </div>
 
       <p className="relative z-10 text-sm text-gray-400 mt-10 font-medium">
