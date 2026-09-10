@@ -11,7 +11,8 @@ import EmployeeSummaryCard from '@/components/employee/EmployeeSummaryCard';
 import EmployeeQuickActions from '@/components/employee/EmployeeQuickActions';
 import EmployeeDesktopSidebar from '@/components/employee/EmployeeDesktopSidebar';
 import MobileAllToolsSheet from '@/components/employee/MobileAllToolsSheet';
-import EmployeeWorkClock from '@/components/employee/EmployeeWorkClock';
+import AttendanceSection from '@/components/employee/AttendanceSection';
+import { useAttendance } from '@/hooks/employee/useAttendance';
 import EmployeeAskAI from '@/components/employee/EmployeeAskAI';
 
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
@@ -75,9 +76,7 @@ export default function EmployeeDashboard() {
   const { t: localize } = useLanguage();
   const { verify, verificationDialog } = useVerificationDialog();
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [timeOutLoading, setTimeOutLoading] = useState(false);
-  const [todayLog, setTodayLog] = useState<{ id: string; time_in: string | null; time_out: string | null; status: string | null } | null>(null);
+
 
   // App-wide configurable settings (late cutoff, leave credits default,
   // time-out reminder hour) -- fetched once on load from app_settings,
@@ -112,6 +111,17 @@ export default function EmployeeDashboard() {
     if (typeof map.attendance_recording_enabled === 'boolean') setAttendanceRecordingEnabled(map.attendance_recording_enabled);
     setSeasonalSettings(normalizeAppSettings(data));
   };
+
+  const {
+    history, todayLog, loading, timeOutLoading, loadAttendance,
+    handleTimeIn, handleTimeOut, officeNetworkAllowed, officeNetworkIssue,
+    checkingNetwork, checkOfficeNetwork,
+  } = useAttendance({
+    attendanceRecordingEnabled,
+    setMessage: message => setMessage(message),
+    onRecorded: () => initializeDashboard(),
+    onTimeOutRecorded: () => setShowTimeOutReminder(false),
+  });
 
   // --- Dark Mode ---
   // The root layout applies the saved theme before first paint. This state
@@ -261,7 +271,6 @@ export default function EmployeeDashboard() {
   };
   const [message, setMessage] = useState('');
   const [profile, setProfile] = useState<any>(null);
-  const [history, setHistory] = useState<any[]>([]);
   const [initLoading, setInitLoading] = useState(true);
   const [pendingLeavesCount, setPendingLeavesCount] = useState(0);
   const [pendingDisputesCount, setPendingDisputesCount] = useState(0);
@@ -343,41 +352,6 @@ export default function EmployeeDashboard() {
 
   const openCommuteChecker = () => {
     setCommuteModalOpen(true);
-  };
-
-  // Office network check -- Time In is only enabled  // Office network check -- Time In is only enabled when the request is
-  // coming from the office's known public IP. See
-  // app/api/check-office-network/route.ts for how this is determined.
-  const [officeNetworkAllowed, setOfficeNetworkAllowed] = useState<boolean | null>(null);
-  const [checkingNetwork, setCheckingNetwork] = useState(true);
-  const [officeNetworkIssue, setOfficeNetworkIssue] = useState<'outside' | 'unavailable' | null>(null);
-
-  const checkOfficeNetwork = async () => {
-    setCheckingNetwork(true);
-    setOfficeNetworkIssue(null);
-    try {
-      const res = await fetch('/api/check-office-network', { cache: 'no-store' });
-      const result = await res.json();
-      if (result.allowed) {
-        setOfficeNetworkAllowed(true);
-        setOfficeNetworkIssue(null);
-      } else {
-        setOfficeNetworkAllowed(false);
-        setOfficeNetworkIssue(
-          result.code === 'ATTENDANCE_NETWORK_UNAVAILABLE' || res.status === 503
-            ? 'unavailable'
-            : 'outside'
-        );
-      }
-    } catch (err) {
-      console.error('Error checking office network:', err);
-      // Fail closed when the network cannot be verified. Only attendance
-      // recording is disabled; the rest of the employee portal stays usable.
-      setOfficeNetworkAllowed(false);
-      setOfficeNetworkIssue('unavailable');
-    } finally {
-      setCheckingNetwork(false);
-    }
   };
 
   useEffect(() => {
@@ -585,16 +559,11 @@ export default function EmployeeDashboard() {
     setPhoneNumber(contactPhone);
     setSavedPhoneNumber(contactPhone);
 
-    // Use the Jeddah calendar date, not the browser's local/UTC date --
-    // otherwise an employee whose device is set to a timezone behind
-    // UTC could see the wrong "today" near midnight.
-    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Riyadh' }).format(new Date());
-
     const year = Number(workDate().slice(0, 4));
-    const [profileRes, govIdRes, historyRes, leavesCountRes, disputesCountRes, payslipsCountRes, supportCountRes, leaveCreditsRes] = await Promise.all([
+    const [profileRes, govIdRes, , leavesCountRes, disputesCountRes, payslipsCountRes, supportCountRes, leaveCreditsRes] = await Promise.all([
       supabase.from('profiles').select('full_name, employee_id, designation, role, avatar_url').eq('id', user.id).single(),
       supabase.from('employee_government_ids').select('hired_date, employment_status').eq('user_id', user.id).maybeSingle(),
-      supabase.from('attendance_logs').select('id, log_date, time_in, time_out, status').eq('user_id', user.id).order('log_date', { ascending: false }),
+      loadAttendance(user.id),
       supabase.from('leave_requests').select('id', { count: 'exact', head: true }).eq('user_id', user.id).eq('status', 'Pending'),
       supabase.from('attendance_disputes').select('id', { count: 'exact', head: true }).eq('user_id', user.id).eq('status', 'Pending'),
       supabase.from('payslips').select('id', { count: 'exact', head: true }).eq('user_id', user.id).eq('published', true).is('acknowledged_at', null),
@@ -621,16 +590,6 @@ export default function EmployeeDashboard() {
     }
     setGovernmentIds(govIdData ?? null);
 
-    const { data: historyData, error: historyError } = historyRes;
-
-    if (historyError) {
-      console.error('Error fetching history:', historyError);
-      setMessage('Error: ' + historyError.message);
-    }
-
-    setHistory(historyData || []);
-    const foundTodayLog = historyData?.find(log => log.log_date === today);
-    setTodayLog(foundTodayLog ?? null);
     setPendingLeavesCount(leavesCountRes.count ?? 0);
     setPendingDisputesCount(disputesCountRes.count ?? 0);
     setNewPayslipsCount(payslipsCountRes.count ?? 0);
@@ -678,31 +637,6 @@ export default function EmployeeDashboard() {
     }
   };
 
-  const handleTimeIn = async () => {
-    if (!attendanceRecordingEnabled) { setMessage('Error: Attendance recording is temporarily unavailable.'); return; }
-    setLoading(true);
-    setMessage('');
-    try {
-      const res = await fetch('/api/time-in', { method: 'POST' });
-      const result = await res.json();
-
-      if (!res.ok) {
-        throw new Error(result.error || 'Failed to record time-in.');
-      }
-
-      setMessage(
-        result.status === 'Late'
-          ? 'Time in recorded, but you are marked as late today.'
-          : 'Success! Attendance recorded.'
-      );
-      await initializeDashboard();
-    } catch (err: any) {
-      setMessage("Error: " + err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   // Called when the employee clicks Time Out.
   // If it's before 6PM Jeddah time, show a warning first.
   const handleTimeOutClick = () => {
@@ -712,27 +646,6 @@ export default function EmployeeDashboard() {
       setShowEarlyTimeOutWarning(true);
     } else {
       handleTimeOut();
-    }
-  };
-
-  const handleTimeOut = async () => {
-    setTimeOutLoading(true);
-    setMessage('');
-    try {
-      const res = await fetch('/api/time-out', { method: 'POST' });
-      const result = await res.json();
-
-      if (!res.ok) {
-        throw new Error(result.error || 'Failed to record time-out.');
-      }
-
-      setMessage('Time out recorded. See you tomorrow!');
-      setShowTimeOutReminder(false);
-      await initializeDashboard();
-    } catch (err: any) {
-      setMessage("Error: " + err.message);
-    } finally {
-      setTimeOutLoading(false);
     }
   };
 
@@ -1593,7 +1506,7 @@ export default function EmployeeDashboard() {
     const onTime = presentLogs.length - lateLogs.length;
     const totalLateMinutes = lateLogs
       .filter(l => l.time_in)
-      .reduce((sum, l) => sum + getMinutesLate(l.time_in), 0);
+      .reduce((sum, l) => sum + getMinutesLate(l.time_in!), 0);
     // presentLogs/lateLogs/absentLogs carried along so the stat cards can
     // list the exact dates behind each number when tapped.
     return { present: presentLogs.length, late: lateLogs.length, leave: leaveLogs.length, absent: absentLogs.length, onTime, totalLateMinutes, presentLogs, lateLogs, leaveLogs, absentLogs };
@@ -2298,45 +2211,24 @@ export default function EmployeeDashboard() {
           <div className="space-y-4 lg:col-span-3 md:space-y-5">
 
             {/* Clock + Time buttons */}
-            {!attendanceRecordingEnabled ? <div role="status" className="rounded-2xl border border-red-200 bg-red-50 p-3 text-xs font-bold text-red-800 dark:border-red-900 dark:bg-red-950/30 dark:!text-white"><T>{"Attendance recording is temporarily unavailable."}</T></div> : null}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <EmployeeWorkClock todayLog={todayLog} holidays={companyHolidays.map(h => h.holiday_date)} startHour={Number(seasonalSettings.work_start_hour)} startMinute={Number(seasonalSettings.work_start_minute)} endHour={workEndHour} endMinute={workEndMinute} />
-              <div className="flex flex-col justify-center gap-2 sm:min-h-40">
-                {!todayLog ? (
-                  <button onClick={handleTimeIn} disabled={!attendanceRecordingEnabled || loading || initLoading || checkingNetwork || officeNetworkAllowed === false} className="btn-primary !py-3">
-                    <T>{loading ? <span className="flex items-center justify-center gap-2"><Spinner size="sm"/><T>{"Processing..."}</T></span> : checkingNetwork ? <span className="flex items-center justify-center gap-2"><Spinner size="sm"/><T>{"Checking..."}</T></span> : officeNetworkAllowed === false ? (officeNetworkIssue === 'unavailable' ? 'Attendance Unavailable' : 'Not on Office Network') : 'Time In'}</T>
-                  </button>
-                ) : !todayLog.time_out ? (
-                  <button onClick={handleTimeOutClick} disabled={!attendanceRecordingEnabled || timeOutLoading || checkingNetwork || officeNetworkAllowed === false} className="btn-danger !py-3">
-                    <T>{timeOutLoading ? <span className="flex items-center justify-center gap-2"><Spinner size="sm"/><T>{"Processing..."}</T></span> : checkingNetwork ? <span className="flex items-center justify-center gap-2"><Spinner size="sm"/><T>{"Checking..."}</T></span> : officeNetworkAllowed === false ? (officeNetworkIssue === 'unavailable' ? 'Attendance Unavailable' : 'Not on Office Network') : 'Time Out'}</T>
-                  </button>
-                ) : (
-                  <button disabled className="btn-primary !py-3 opacity-50 cursor-not-allowed"><T>{"Completed for Today"}</T></button>
-                )}
-                <div className="flex min-h-6 flex-col justify-center">
-                {todayLog?.time_in && (
-                  <p className="text-center text-slate-400 text-xs"><T>{" In: "}</T>{new Date(todayLog.time_in).toLocaleTimeString('en-US', { timeZone: 'Asia/Riyadh', hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                    {todayLog.time_out && <><T>{" · Out: "}</T>{new Date(todayLog.time_out).toLocaleTimeString('en-US', { timeZone: 'Asia/Riyadh', hour: '2-digit', minute: '2-digit', second: '2-digit' })}</>}
-                  </p>
-                )}
-                {!checkingNetwork && officeNetworkAllowed === false && !(todayLog?.time_out) && (
-                  <div className={`flex items-start justify-between gap-3 rounded-xl border p-3 ${officeNetworkIssue === 'unavailable' ? 'bg-red-50 border-red-100' : 'bg-orange-50 border-orange-100'}`}>
-                    <div className="min-w-0">
-                      <p className={`text-xs font-bold ${officeNetworkIssue === 'unavailable' ? 'text-red-700' : 'text-orange-700'}`}>
-                        <T>{officeNetworkIssue === 'unavailable' ? 'Attendance recording is temporarily unavailable.' : 'You are not connected to an authorized office network.'}</T>
-                      </p>
-                      <p className="text-slate-500 text-[10px] mt-1">
-                        <T>{officeNetworkIssue === 'unavailable'
-                          ? 'Please contact HR or IT. You can still use the rest of the Employee Portal.'
-                          : 'Time In and Time Out are available only through the office network. Other portal features remain available.'}</T>
-                      </p>
-                    </div>
-                    <button onClick={checkOfficeNetwork} className="text-blue-600 text-xs font-bold hover:underline flex-shrink-0"><T>{"Retry"}</T></button>
-                  </div>
-                )}
-                </div>
-              </div>
-            </div>
+            <AttendanceSection
+              todayLog={todayLog}
+              attendanceRecordingEnabled={attendanceRecordingEnabled}
+              loading={loading}
+              timeOutLoading={timeOutLoading}
+              initLoading={initLoading}
+              checkingNetwork={checkingNetwork}
+              officeNetworkAllowed={officeNetworkAllowed}
+              officeNetworkIssue={officeNetworkIssue}
+              holidays={companyHolidays.map(h => h.holiday_date)}
+              startHour={Number(seasonalSettings.work_start_hour)}
+              startMinute={Number(seasonalSettings.work_start_minute)}
+              workEndHour={workEndHour}
+              workEndMinute={workEndMinute}
+              handleTimeIn={handleTimeIn}
+              handleTimeOutClick={handleTimeOutClick}
+              checkOfficeNetwork={checkOfficeNetwork}
+            />
 
             {/* Announcements */}
             {/* min-h approximates the resolved card's typical height (icon row
