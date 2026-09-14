@@ -11,6 +11,7 @@ import { Activity, AlertTriangle, ChevronRight, Clock3, Moon, ShieldCheck, Sun, 
 import SuperAdminQuickActions from '@/components/super-admin/SuperAdminQuickActions';
 import SuperAdminMobileBottomNav from '@/components/super-admin/SuperAdminMobileBottomNav';
 import SuperAdminMobileToolsSheet from '@/components/super-admin/SuperAdminMobileToolsSheet';
+import ITHelpdesk from '@/components/super-admin/ITHelpdesk';
 import SuperAdminDesktopSidebar from '@/components/super-admin/SuperAdminDesktopSidebar';
 import { APP_SETTING_DEFINITIONS, DEFAULT_APP_SETTINGS, normalizeAppSettings, type AppSettingsValues } from '@/lib/app-settings';
 import VerificationDialog from '@/components/shared/VerificationDialog';
@@ -33,6 +34,7 @@ export default function SuperAdminDashboard() {
   const { t: localize } = useLanguage();
   const [darkMode, setDarkMode] = useState(false);
   const [mobileToolsOpen, setMobileToolsOpen] = useState(false);
+  const [itHelpdeskOpen, setItHelpdeskOpen] = useState(false);
   const [employees, setEmployees] = useState<any[]>([]);
   const [employeesLoading, setEmployeesLoading] = useState(true);
 
@@ -1007,6 +1009,7 @@ export default function SuperAdminDashboard() {
       <SuperAdminDesktopSidebar darkMode={darkMode} email={currentAdminEmail} onToggleTheme={toggleTheme} onLogout={handleLogout} onHome={() => document.getElementById('super-admin-dashboard-top')?.scrollIntoView({ behavior: 'smooth' })} onCreate={openCreateAccountModal} onAccounts={openUserAccountsModal} onAttendance={openAttendanceRecordsModal} onSettings={openAppSettingsModal} onReset={openResetPasswordModal} onAudit={openAuditLogModal} onHealth={openHealthModal} onBackup={() => setBackupModalOpen(true)} onArchive={() => setArchivalModalOpen(true)} />
       <div className="mx-auto max-w-7xl space-y-4 md:space-y-5">
         {/* SUPER ADMIN HEADER — aligned with HR / Employee hierarchy */}
+        <ITHelpdesk open={itHelpdeskOpen} onClose={() => setItHelpdeskOpen(false)} />
         <header className="rounded-[26px] border border-slate-200 bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.07)] dark:border-slate-700 dark:bg-[#202521] sm:p-5">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-start gap-3 min-w-0">
@@ -1136,7 +1139,7 @@ export default function SuperAdminDashboard() {
         <SuperAdminQuickActions
           onCreateAccount={openCreateAccountModal}
           onAccounts={openUserAccountsModal}
-          onAttendance={openAttendanceRecordsModal}
+          onHelpdesk={() => setItHelpdeskOpen(true)}
           onSettings={openAppSettingsModal}
           onResetPassword={openResetPasswordModal}
           onAuditLog={openAuditLogModal}
@@ -1150,7 +1153,7 @@ export default function SuperAdminDashboard() {
       </div>
 
       <SuperAdminMobileBottomNav onHome={() => document.getElementById('super-admin-dashboard-top')?.scrollIntoView({ behavior: 'smooth' })} onAccounts={openUserAccountsModal} onSettings={openAppSettingsModal} onHealth={openHealthModal} onMore={() => setMobileToolsOpen(true)} />
-      <SuperAdminMobileToolsSheet open={mobileToolsOpen} darkMode={darkMode} email={currentAdminEmail} onClose={() => setMobileToolsOpen(false)} onToggleTheme={toggleTheme} onLogout={handleLogout} onCreate={openCreateAccountModal} onAccounts={openUserAccountsModal} onAttendance={openAttendanceRecordsModal} onSettings={openAppSettingsModal} onReset={openResetPasswordModal} onAudit={openAuditLogModal} onHealth={openHealthModal} onBackup={() => setBackupModalOpen(true)} onArchive={() => setArchivalModalOpen(true)} />
+      <SuperAdminMobileToolsSheet onHelpdesk={() => setItHelpdeskOpen(true)} open={mobileToolsOpen} darkMode={darkMode} email={currentAdminEmail} onClose={() => setMobileToolsOpen(false)} onToggleTheme={toggleTheme} onLogout={handleLogout} onCreate={openCreateAccountModal} onAccounts={openUserAccountsModal} onAttendance={openAttendanceRecordsModal} onSettings={openAppSettingsModal} onReset={openResetPasswordModal} onAudit={openAuditLogModal} onHealth={openHealthModal} onBackup={() => setBackupModalOpen(true)} onArchive={() => setArchivalModalOpen(true)} />
 
       {createAccountModalOpen && <AccountFormModal open={createAccountModalOpen} onClose={() => setCreateAccountModalOpen(false)} confirmPassword={confirmPassword} deactivating={deactivating} designation={designation} editingId={editingId} email={email} emailChecking={emailChecking} emailConflict={emailConflict} employeeId={employeeId} employeeIdConflict={employeeIdConflict} employees={employees} fullName={fullName} fullNameConflict={fullNameConflict} handleSave={handleSave} loading={loading} password={password} passwordMismatch={passwordMismatch} resetForm={resetForm} role={role} setConfirmPassword={setConfirmPassword} setDesignation={setDesignation} setEmail={setEmail} setEmployeeId={setEmployeeId} setFullName={setFullName} setPassword={setPassword} setRole={setRole} toggleAccountActive={toggleAccountActive} />}
 

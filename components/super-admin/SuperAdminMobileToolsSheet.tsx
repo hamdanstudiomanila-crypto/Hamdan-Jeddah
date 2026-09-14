@@ -2,15 +2,16 @@
 import { T, useLanguage } from '@/components/language/LanguageProvider';
 
 
-import { Activity, Archive, ClipboardList, DatabaseBackup, KeyRound, LogOut, Moon, ScrollText, Settings, Sun, UserPlus, Users, X } from 'lucide-react';
+import { Activity, Headphones, Archive, ClipboardList, DatabaseBackup, KeyRound, LogOut, Moon, ScrollText, Settings, Sun, UserPlus, Users, X } from 'lucide-react';
 
-type Props = { open: boolean; darkMode: boolean; email: string | null; onClose: () => void; onToggleTheme: () => void; onLogout: () => void; onCreate: () => void; onAccounts: () => void; onAttendance: () => void; onSettings: () => void; onReset: () => void; onAudit: () => void; onHealth: () => void; onBackup: () => void; onArchive: () => void };
+type Props = { open: boolean; darkMode: boolean; email: string | null; onClose: () => void; onToggleTheme: () => void; onLogout: () => void; onCreate: () => void; onAccounts: () => void; onAttendance: () => void; onHelpdesk: () => void; onSettings: () => void; onReset: () => void; onAudit: () => void; onHealth: () => void; onBackup: () => void; onArchive: () => void };
 
 export default function SuperAdminMobileToolsSheet(props: Props) {
   const { t: localize } = useLanguage();
   if (!props.open) return null;
   const groups = [
     { title: 'Account Management', items: [['Create Account', UserPlus, props.onCreate], ['User Accounts', Users, props.onAccounts], ['Reset Password', KeyRound, props.onReset]] },
+    { title: 'Help Desk', items: [['IT Help Desk', Headphones, props.onHelpdesk]] },
     { title: 'Data & Attendance', items: [['Attendance Records', ClipboardList, props.onAttendance], ['Audit Log', ScrollText, props.onAudit]] },
     { title: 'System', items: [['System Health', Activity, props.onHealth], ['Database Backup', DatabaseBackup, props.onBackup], ['Data Archival', Archive, props.onArchive]] },
     { title: 'Configuration', items: [['App Settings', Settings, props.onSettings]] },

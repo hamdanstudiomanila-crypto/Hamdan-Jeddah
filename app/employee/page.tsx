@@ -567,7 +567,7 @@ export default function EmployeeDashboard() {
       supabase.from('leave_requests').select('id', { count: 'exact', head: true }).eq('user_id', user.id).eq('status', 'Pending'),
       supabase.from('attendance_disputes').select('id', { count: 'exact', head: true }).eq('user_id', user.id).eq('status', 'Pending'),
       supabase.from('payslips').select('id', { count: 'exact', head: true }).eq('user_id', user.id).eq('published', true).is('acknowledged_at', null),
-      supabase.from('employee_support_requests').select('id', { count: 'exact', head: true }).eq('user_id', user.id).neq('status', 'Resolved'),
+      supabase.from('employee_support_requests').select('id', { count: 'exact', head: true }).eq('user_id', user.id).not('status', 'in', '(Resolved,Cancelled)'),
       supabase.from('leave_credits').select('total_credits, used_credits').eq('user_id', user.id).eq('year', year).maybeSingle(),
     ]);
 
@@ -815,7 +815,7 @@ export default function EmployeeDashboard() {
     category: string;
     subject: string;
     description: string;
-    status: 'Submitted' | 'In Progress' | 'Resolved';
+    status: 'Open' | 'In Progress' | 'Resolved' | 'Cancelled';
     hr_notes: string | null;
     created_at: string;
     updated_at: string;
@@ -837,8 +837,24 @@ export default function EmployeeDashboard() {
       .order('created_at', { ascending: false });
     if (error) console.error('Error fetching support requests:', error);
     setSupportRequests((data || []) as SupportRequest[]);
-    setOpenSupportCount((data || []).filter((request) => request.status !== 'Resolved').length);
+    setOpenSupportCount((data || []).filter((request) => !['Resolved', 'Cancelled'].includes(request.status)).length);
     setSupportLoading(false);
+  };
+
+  const cancelSupportRequest = async (requestId: string) => {
+    if (!currentUserId || supportSaving) return;
+    setSupportSaving(true);
+    setSupportMessage(null);
+    try {
+      const { data, error } = await supabase.from('employee_support_requests')
+        .update({ status: 'Cancelled' }).eq('id', requestId).eq('user_id', currentUserId)
+        .not('status', 'in', '(Resolved,Cancelled)').select('id').maybeSingle();
+      if (error || !data) throw new Error(error?.message || localize('Request is already closed or unavailable.'));
+      setSupportMessage({ type: 'success', text: localize('Request cancelled and moved to History.') });
+      await fetchSupportRequests();
+    } catch (error) {
+      setSupportMessage({ type: 'error', text: error instanceof Error ? error.message : localize('Unable to cancel request.') });
+    } finally { setSupportSaving(false); }
   };
 
   const submitSupportRequest = async () => {
@@ -2621,7 +2637,7 @@ export default function EmployeeDashboard() {
       {attendanceCalendarOpen && <AttendanceCalendarModal open={attendanceCalendarOpen} onClose={() => setAttendanceCalendarOpen(false)} month={attendanceCalendarMonth} onMonthChange={(value) => { setAttendanceCalendarMonth(value); setSelectedAttendanceCalendarDate(null); }} availableMonths={availableMonths} formatMonth={formatMonthOnly} days={attendanceCalendarDays} selectedDate={selectedAttendanceCalendarDate} onSelectDate={setSelectedAttendanceCalendarDate} selectedDay={selectedAttendanceCalendarDay} />}
 
       {/* Help Desk / HR Request Modal */}
-      {supportModalOpen && <HelpDeskModal open={supportModalOpen} onClose={() => setSupportModalOpen(false)} saving={supportSaving} loading={supportLoading} message={supportMessage} form={supportForm} setForm={setSupportForm} requests={supportRequests} onSubmit={submitSupportRequest} />}
+      {supportModalOpen && <HelpDeskModal open={supportModalOpen} onClose={() => setSupportModalOpen(false)} saving={supportSaving} loading={supportLoading} message={supportMessage} form={supportForm} setForm={setSupportForm} requests={supportRequests} onSubmit={submitSupportRequest} onCancel={cancelSupportRequest} />}
 
       {/* Employee Documents Modal */}
       {documentsModalOpen && <EmployeeDocumentsModal open={documentsModalOpen} onClose={() => setDocumentsModalOpen(false)} loading={documentsLoading} documents={employeeDocuments} downloadingId={downloadingDocumentId} onDownload={downloadEmployeeDocument} />}
