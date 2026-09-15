@@ -133,27 +133,11 @@ async function answerEmployeeQuestionCore(ctx: Context, call = workflowCall) {
     return { answer: parts.join('\n') };
   }
   const dates = classificationDates(c);
-  const { start, year } = dates;
+  const { start } = dates;
   const end = c.intent === 'own_attendance' && dates.end > dates.today ? dates.today : dates.end;
   if (c.intent === 'own_attendance' && start > end) return { answer: tl ? 'Future pa ang period na iyon. Wala pang recorded attendance para rito.' : 'That period is in the future; there is no recorded attendance to summarize yet.' };
   if (c.intent === 'own_leave_balance') {
-    if (start.slice(0, 4) !== end.slice(0, 4)) return { answer: tl ? 'Anong taon ng leave credits ang gusto mong tingnan? Isang taon bawat balance.' : 'Which year of leave credits would you like? Balances are recorded per year.' };
-    const { data, error } = await client.from('leave_credits').select('total_credits, used_credits').eq('user_id', userId).eq('year', year).maybeSingle();
-    if (error) throw new EmployeeAIError('Unable to read your leave balance.');
-    if (!data) return { answer: tl ? `Wala pang recorded leave balance para sa ${year}. Kontakin ang HR.` : `No recorded leave balance for ${year}. Please contact HR.` };
-    const remaining = data.total_credits - data.used_credits;
-    const values: Record<string, string> = tl ? {
-      remaining_credits: `May ${remaining} araw ka pang leave credits para sa ${year}.`,
-      total_credits: `Ang kabuuang leave allocation mo para sa ${year} ay ${data.total_credits} araw.`,
-      used_credits: `Nagamit mo na ang ${data.used_credits} araw ng leave credits mo para sa ${year}.`,
-      leave_balance_summary: `Para sa ${year}: ${data.total_credits} araw ang allocation mo, ${data.used_credits} ang nagamit, at ${remaining} ang natitira.`,
-    } : {
-      remaining_credits: `You have ${remaining} days of leave credits remaining for ${year}.`,
-      total_credits: `Your leave allocation for ${year} is ${data.total_credits} days.`,
-      used_credits: `You have used ${data.used_credits} days of leave credits for ${year}.`,
-      leave_balance_summary: `For ${year}, you have ${data.total_credits} allocated leave days, ${data.used_credits} used, and ${remaining} remaining.`,
-    };
-    return { answer: values[c.metric] };
+    return { answer: tl ? 'Hindi gumagamit ng leave credits ang Jeddah system. Puwede kang mag-file ng leave para sa nakaraang petsa; rerepasuhin ito ng HR.' : 'The Jeddah system does not use leave credits. You can file leave for past dates; HR will review your request.' };
   }
   // Fetch only allowed columns, scoped by the verified session, never classifier identity.
   if (c.intent === 'own_attendance') {

@@ -3,7 +3,7 @@ import { T, useLanguage } from '@/components/language/LanguageProvider';
 
 
 import { isScheduledWorkday, isWorkingDate, workDate, WORK_SCHEDULE_EFFECTIVE_DATE } from '@/lib/work-schedule';
-import { countChargeableLeaveDays } from '@/lib/leave-rules';
+import { countChargeableLeaveDays, validateLeaveDateRange } from '@/lib/leave-rules';
 import { attendanceTiming, isEarlyOut } from '@/lib/attendance-rules';
 import { applyPortalTheme } from '@/lib/portal-theme';
 import MobileBottomNav from '@/components/employee/MobileBottomNav';
@@ -69,7 +69,6 @@ function MoonIcon() {
 // fetched from the database (editable via Super Admin -> App Settings).
 const FALLBACK_LATE_CUTOFF_HOUR = 8;
 const FALLBACK_LATE_CUTOFF_MINUTE = 0;
-const FALLBACK_LEAVE_CREDITS = 10;
 const FALLBACK_TIME_OUT_REMINDER_HOUR = 18;
 
 export default function EmployeeDashboard() {
@@ -78,13 +77,12 @@ export default function EmployeeDashboard() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
 
-  // App-wide configurable settings (late cutoff, leave credits default,
+  // App-wide configurable settings (late cutoff,
   // time-out reminder hour) -- fetched once on load from app_settings,
   // editable by Super Admin without needing a code change/redeploy.
   // Falls back to the constants above until the fetch resolves.
   const [lateCutoffHour, setLateCutoffHour] = useState(FALLBACK_LATE_CUTOFF_HOUR);
   const [lateCutoffMinute, setLateCutoffMinute] = useState(FALLBACK_LATE_CUTOFF_MINUTE);
-  const [fallbackLeaveCredits, setFallbackLeaveCredits] = useState(FALLBACK_LEAVE_CREDITS);
   const [timeOutReminderHour, setTimeOutReminderHour] = useState(FALLBACK_TIME_OUT_REMINDER_HOUR);
   const [attendanceRecordingEnabled, setAttendanceRecordingEnabled] = useState(true);
   const [seasonalSettings, setSeasonalSettings] = useState<AppSettingsValues>({ ...DEFAULT_APP_SETTINGS });
@@ -106,7 +104,6 @@ export default function EmployeeDashboard() {
     const map = Object.fromEntries((data || []).map((r) => [r.key, r.value]));
     if (typeof map.late_cutoff_hour === 'number') setLateCutoffHour(map.late_cutoff_hour);
     if (typeof map.late_cutoff_minute === 'number') setLateCutoffMinute(map.late_cutoff_minute);
-    if (typeof map.default_leave_credits === 'number') setFallbackLeaveCredits(map.default_leave_credits);
     if (typeof map.time_out_reminder_hour === 'number') setTimeOutReminderHour(map.time_out_reminder_hour);
     if (typeof map.attendance_recording_enabled === 'boolean') setAttendanceRecordingEnabled(map.attendance_recording_enabled);
     setSeasonalSettings(normalizeAppSettings(data));
@@ -504,7 +501,6 @@ export default function EmployeeDashboard() {
             setLeaveResultToast({ status: newRow.status, leave_type: newRow.leave_type || 'Leave' });
             playNotificationSound();
             fetchMyLeaves();
-            fetchLeaveCredits();
             setTimeout(() => setLeaveResultToast(null), 8000);
           }
         }
@@ -559,8 +555,7 @@ export default function EmployeeDashboard() {
     setPhoneNumber(contactPhone);
     setSavedPhoneNumber(contactPhone);
 
-    const year = Number(workDate().slice(0, 4));
-    const [profileRes, govIdRes, , leavesCountRes, disputesCountRes, payslipsCountRes, supportCountRes, leaveCreditsRes] = await Promise.all([
+    const [profileRes, govIdRes, , leavesCountRes, disputesCountRes, payslipsCountRes, supportCountRes] = await Promise.all([
       supabase.from('profiles').select('full_name, employee_id, designation, role, avatar_url').eq('id', user.id).single(),
       supabase.from('employee_government_ids').select('hired_date, employment_status').eq('user_id', user.id).maybeSingle(),
       loadAttendance(user.id),
@@ -568,7 +563,6 @@ export default function EmployeeDashboard() {
       supabase.from('attendance_disputes').select('id', { count: 'exact', head: true }).eq('user_id', user.id).eq('status', 'Pending'),
       supabase.from('payslips').select('id', { count: 'exact', head: true }).eq('user_id', user.id).eq('published', true).is('acknowledged_at', null),
       supabase.from('employee_support_requests').select('id', { count: 'exact', head: true }).eq('user_id', user.id).not('status', 'in', '(Resolved,Cancelled)'),
-      supabase.from('leave_credits').select('total_credits, used_credits').eq('user_id', user.id).eq('year', year).maybeSingle(),
     ]);
 
     const { data: profileData, error: profileError } = profileRes;
@@ -594,7 +588,6 @@ export default function EmployeeDashboard() {
     setPendingDisputesCount(disputesCountRes.count ?? 0);
     setNewPayslipsCount(payslipsCountRes.count ?? 0);
     setOpenSupportCount(supportCountRes.count ?? 0);
-    setLeaveCredits(leaveCreditsRes.data ?? null);
     setInitLoading(false);
   };
 
@@ -941,7 +934,6 @@ export default function EmployeeDashboard() {
   // --- Leave Requests ---
   const [myLeaves, setMyLeaves] = useState<any[]>([]);
   const [myLeavesModalOpen, setMyLeavesModalOpen] = useState(false);
-  const [leaveCredits, setLeaveCredits] = useState<{ total_credits: number; used_credits: number } | null>(null);
   const [leaveModalOpen, setLeaveModalOpen] = useState(false);
   // Single "Leave" quick action opens this small choice screen first --
   // "Request Leave" or "My Leave Requests" -- instead of two separate
@@ -955,13 +947,6 @@ export default function EmployeeDashboard() {
   // Which leave request is currently expanded into the detail view inside
   // the "My Leave Requests" modal (null = showing the list).
   const [selectedMyLeaveDetail, setSelectedMyLeaveDetail] = useState<any>(null);
-  const isRegular = governmentIds?.employment_status === 'Regular';
-  // Configurable default (Super Admin -> App Settings) -- matches the
-  // DB column default and the fallback used server-side in
-  // settle_leave_day() when a leave_credits row doesn't exist yet for
-  // the employee/year.
-  const remainingCredits = leaveCredits ? leaveCredits.total_credits - leaveCredits.used_credits : fallbackLeaveCredits;
-
   const fetchMyLeaves = async () => {
     if (!currentUserId) return;
     const { data, error } = await supabase
@@ -974,18 +959,6 @@ export default function EmployeeDashboard() {
     setPendingLeavesCount((data || []).filter((leave) => leave.status === 'Pending').length);
   };
 
-  const fetchLeaveCredits = async () => {
-    if (!currentUserId) return;
-    const year = Number(workDate().slice(0, 4));
-    const { data } = await supabase
-      .from('leave_credits')
-      .select('total_credits, used_credits')
-      .eq('user_id', currentUserId)
-      .eq('year', year)
-      .maybeSingle();
-    setLeaveCredits(data ?? null);
-  };
-
   const submitLeave = async () => {
     if (leaveForm.leave_type === 'Sick' && !leaveAttachment) {
       setLeaveMsg({ type: 'error', text: 'Sick leave requires a supporting document (PDF, JPG, or PNG, up to 10 MB).' });
@@ -995,25 +968,16 @@ export default function EmployeeDashboard() {
       setLeaveMsg({ type: 'error', text: 'Choose a non-empty PDF, JPG, or PNG up to 10 MB.' });
       return;
     }
-    if (!leaveForm.start_date || !leaveForm.end_date) {
-      setLeaveMsg({ type: 'error', text: 'Please fill in the start and end date.' });
-      return;
-    }
-    if (leaveForm.end_date < leaveForm.start_date) {
-      setLeaveMsg({ type: 'error', text: 'End date cannot be before start date.' });
+    const dateError = validateLeaveDateRange(leaveForm.start_date, leaveForm.end_date);
+    if (dateError) {
+      setLeaveMsg({ type: 'error', text: dateError });
       return;
     }
     if (seasonalSettings.feature_leave_enabled === false) {
       setLeaveMsg({ type: 'error', text: 'Leave requests are temporarily disabled by the administrator.' });
       return;
     }
-    const currentJeddahDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Riyadh' }).format(new Date());
-    const noticeDays = Math.floor((new Date(`${leaveForm.start_date}T00:00:00+03:00`).getTime() - new Date(`${currentJeddahDate}T00:00:00+03:00`).getTime()) / 86_400_000);
-    const minimumNotice = Number(seasonalSettings.leave_request_min_notice_days || 0);
-    if (noticeDays < minimumNotice) {
-      setLeaveMsg({ type: 'error', text: `Leave requests require at least ${minimumNotice} day${minimumNotice === 1 ? '' : 's'} notice.` });
-      return;
-    }
+    // Jeddah permits retroactive leave filing for previous absences.
     const requestedDays = countLeaveDays(leaveForm.start_date, leaveForm.end_date);
     const maximumDays = Number(seasonalSettings.max_consecutive_leave_days || 30);
     if (requestedDays > maximumDays) {
@@ -2600,7 +2564,7 @@ export default function EmployeeDashboard() {
         initialDestination={weatherAdvisory?.location_name}
       />}
 
-      {leaveChoiceModalOpen && <LeaveChoiceModal open={leaveChoiceModalOpen} onClose={() => setLeaveChoiceModalOpen(false)} fetchMyLeaves={fetchMyLeaves} isRegular={isRegular} myLeavesCount={myLeaves.length} remainingCredits={remainingCredits} setLeaveForm={setLeaveForm} setLeaveModalOpen={setLeaveModalOpen} setLeaveMsg={setLeaveMsg} setMyLeavesModalOpen={setMyLeavesModalOpen} clearSelectedLeave={() => setSelectedMyLeaveDetail(null)} />}
+      {leaveChoiceModalOpen && <LeaveChoiceModal open={leaveChoiceModalOpen} onClose={() => setLeaveChoiceModalOpen(false)} fetchMyLeaves={fetchMyLeaves} myLeavesCount={myLeaves.length} setLeaveForm={setLeaveForm} setLeaveModalOpen={setLeaveModalOpen} setLeaveMsg={setLeaveMsg} setMyLeavesModalOpen={setMyLeavesModalOpen} clearSelectedLeave={() => setSelectedMyLeaveDetail(null)} />}
 
       {myLeavesModalOpen && <LeaveRequestsModal open={myLeavesModalOpen} onClose={() => setMyLeavesModalOpen(false)} onBackToChoice={() => { setMyLeavesModalOpen(false); setLeaveChoiceModalOpen(true); }} cancelLeave={cancelLeave} countLeaveDays={countLeaveDays} myLeaves={myLeaves} selectedMyLeaveDetail={selectedMyLeaveDetail} setSelectedMyLeaveDetail={setSelectedMyLeaveDetail} />}
 
@@ -2612,7 +2576,7 @@ export default function EmployeeDashboard() {
       {/* Company Calendar Modal */}
       {calendarModalOpen && <CompanyCalendarModal open={calendarModalOpen} onClose={() => setCalendarModalOpen(false)} loading={holidaysLoading} holidays={companyHolidays} upcoming={upcomingHolidays} past={pastHolidays} formatDate={formatHolidayDate} daysUntil={daysUntilHoliday} />}
 
-      {leaveModalOpen && <LeaveRequestModal leaveAttachment={leaveAttachment} setLeaveAttachment={setLeaveAttachment} open={leaveModalOpen} onClose={() => setLeaveModalOpen(false)} onBack={() => { setLeaveModalOpen(false); setLeaveChoiceModalOpen(true); }} countLeaveDays={countLeaveDays} countLeaveHolidays={countLeaveHolidays} fallbackLeaveCredits={fallbackLeaveCredits} isRegular={isRegular} leaveCredits={leaveCredits} leaveForm={leaveForm} leaveMsg={leaveMsg} leaveSaving={leaveSaving} remainingCredits={remainingCredits} setLeaveForm={setLeaveForm} submitLeave={submitLeave} todayJeddah={todayJeddah} upcomingApprovedLeaves={upcomingApprovedLeaves} />}
+      {leaveModalOpen && <LeaveRequestModal leaveAttachment={leaveAttachment} setLeaveAttachment={setLeaveAttachment} open={leaveModalOpen} onClose={() => setLeaveModalOpen(false)} onBack={() => { setLeaveModalOpen(false); setLeaveChoiceModalOpen(true); }} countLeaveDays={countLeaveDays} countLeaveHolidays={countLeaveHolidays} leaveForm={leaveForm} leaveMsg={leaveMsg} leaveSaving={leaveSaving} setLeaveForm={setLeaveForm} submitLeave={submitLeave} todayJeddah={todayJeddah} upcomingApprovedLeaves={upcomingApprovedLeaves} />}
 
       {/* Leave Result Toast */}
       {leaveResultToast && (

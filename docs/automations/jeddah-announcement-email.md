@@ -6,7 +6,7 @@ The portal's HR Publish button inserts `public.announcements`; Update Announceme
 
 1. Create a **new Header Auth credential** named `JEDDAH Announcement Webhook` in n8n: header name `x-announcement-secret`, value a new randomly generated secret. Select it in **Announcement Webhook**. Keep it separate from backup credentials.
 2. Select **JEDDAH Supabase** credentials in **Get Profiles** and **Get Employee Email**. Host: `https://qamdcpgwkveikddemvhz.supabase.co`; use this project's server secret/service-role credential. Do not edit the shared Manila credential. The workflow retrieves all profile pages, then looks up each employee's Auth email.
-3. Select **SMTP account 2** in **Send Announcement Email**. In **Config**, use `fromEmail: 'hr@hamdanstudio.com'`, matching the SMTP user. The export defaults to this sender; select the credential in n8n after importing.
+3. Select your existing authorized **SMTP account** in **Send Announcement Email**. In **Config**, verify `fromEmail` is an address this SMTP account can send from. The default matches the existing backup sender.
 4. Keep `testMode: true`. Enter your own address in `testEmail` in **Config**. The test sends one email to that address, even when there are many employees. With no employee profiles, the workflow stops before the send stage.
 5. Save/publish the workflow. Copy its **Production URL**; the path is `/webhook/announcement-published-jeddah`. Use the current public ngrok host, not localhost. n8n and ngrok must remain running.
 6. In the **Jeddah** Supabase dashboard, open **Database → Webhooks → Create webhook**. Choose `public.announcements`, events **INSERT and UPDATE**, HTTP POST, and the production URL. Add `Content-Type: application/json` and `x-announcement-secret` matching the n8n Header Auth credential. Do not add a webhook to Manila.
@@ -52,3 +52,4 @@ npm test -- tests/announcement-email.test.ts
 Re-import the regenerated export and reselect credentials. Tests use synthetic data and never send mail. Live activation and SMTP delivery must be verified in n8n after credentials are selected.
 
 References: [Supabase database webhooks](https://supabase.com/docs/guides/database/webhooks), [n8n Supabase node](https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.supabase/).
+

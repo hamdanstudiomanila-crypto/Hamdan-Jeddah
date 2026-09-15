@@ -739,5 +739,6 @@
   "Cancelled requests are read-only.": "الطلبات الملغاة للقراءة فقط.",
   "Request is already closed or unavailable.": "الطلب مغلق بالفعل أو غير متاح.",
   "Request cancelled and moved to History.": "تم إلغاء الطلب ونقله إلى السجل.",
-  "Unable to cancel request.": "تعذر إلغاء الطلب."
+  "Unable to cancel request.": "تعذر إلغاء الطلب.",
+  "working day": "يوم عمل"
 }

@@ -107,7 +107,7 @@ export default function EmployeeAskAI() {
             <h3 className="text-[23px] font-semibold tracking-tight"><T>{"Hi! How can I help?"}</T></h3>
             <p className="mt-2 max-w-[280px] text-sm leading-relaxed text-slate-500 dark:text-[#a8b9af]"><T>{"Ask me about your attendance, leave, or payslip."}</T></p>
             <div className="mt-7 flex w-full flex-col gap-2">
-              {['How many leave credits do I have?', 'What are the deductions in my latest payslip?'].map(prompt => <button type="button" key={prompt} onClick={() => void send(prompt)} className="flex min-h-12 items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-start text-xs font-medium transition hover:border-emerald-300 hover:bg-emerald-50 dark:border-white/10 dark:bg-white/[0.025] dark:hover:border-emerald-500/40 dark:hover:bg-emerald-500/5"><span>{prompt}</span><ArrowUp size={14} className="shrink-0 rotate-45 text-slate-400" /></button>)}
+              {['What is the status of my leave requests?', 'What are the deductions in my latest payslip?'].map(prompt => <button type="button" key={prompt} onClick={() => void send(prompt)} className="flex min-h-12 items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-start text-xs font-medium transition hover:border-emerald-300 hover:bg-emerald-50 dark:border-white/10 dark:bg-white/[0.025] dark:hover:border-emerald-500/40 dark:hover:bg-emerald-500/5"><span>{prompt}</span><ArrowUp size={14} className="shrink-0 rotate-45 text-slate-400" /></button>)}
             </div>
           </div>}
           {messages.map(message => <div key={message.id} className={`flex flex-col ${message.role === 'user' ? 'items-end' : 'items-start'}`}>

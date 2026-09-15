@@ -3,9 +3,9 @@ import { T, useLanguage } from '@/components/language/LanguageProvider';
 
 
 import { useEffect } from 'react';
-import { CalendarDays, CalendarRange, Coins, FileChartColumn, FolderDown, LifeBuoy, LogOut, Megaphone, Moon, Sun, X } from 'lucide-react';
+import { CalendarDays, CalendarRange, FileChartColumn, FolderDown, LifeBuoy, LogOut, Megaphone, Moon, Sun, X } from 'lucide-react';
 
-type Props = { open: boolean; darkMode: boolean; onClose: () => void; onToggleTheme: () => void; onLogout: () => void; onAnnouncements: () => void; onHolidays: () => void; onLeaveCalendar: () => void; onLeaveCredits: () => void; onReports: () => void; onDocuments: () => void; onHelpdesk: () => void };
+type Props = { open: boolean; darkMode: boolean; onClose: () => void; onToggleTheme: () => void; onLogout: () => void; onAnnouncements: () => void; onHolidays: () => void; onLeaveCalendar: () => void; onReports: () => void; onDocuments: () => void; onHelpdesk: () => void };
 
 export default function HRMobileToolsSheet(props: Props) {
   const { t: localize } = useLanguage();
@@ -15,7 +15,6 @@ export default function HRMobileToolsSheet(props: Props) {
     { label: 'Announcements', detail: 'Publish company updates', icon: Megaphone, tone: 'from-fuchsia-500 to-purple-700', action: props.onAnnouncements },
     { label: 'Holidays', detail: 'Manage holiday dates', icon: CalendarDays, tone: 'from-rose-500 to-pink-700', action: props.onHolidays },
     { label: 'Leave Calendar', detail: 'View team schedules', icon: CalendarRange, tone: 'from-violet-500 to-indigo-700', action: props.onLeaveCalendar },
-    { label: 'Leave Credits', detail: 'Review balances', icon: Coins, tone: 'from-amber-400 to-yellow-700', action: props.onLeaveCredits },
     { label: 'Export Reports', detail: 'Download CSV or PDF', icon: FileChartColumn, tone: 'from-cyan-500 to-blue-700', action: props.onReports },
     { label: 'Documents', detail: 'Manage employee files', icon: FolderDown, tone: 'from-slate-500 to-slate-800', action: props.onDocuments },
     { label: 'Help Desk', detail: 'Respond to requests', icon: LifeBuoy, tone: 'from-sky-500 to-cyan-700', action: props.onHelpdesk },

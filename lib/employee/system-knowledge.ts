@@ -46,12 +46,12 @@ export const SYSTEM_KNOWLEDGE: Record<SystemKnowledgeMetric, { en: string; tl: s
     tl: 'Para sa missing time-in o time-out, buksan ang My Disputes o Attendance, piliin ang Report Missing Log, ilagay ang missing date/time at reason, tapos i-submit. HR muna ang magre-review bago ma-correct ang record.',
   },
   leave_request_process: {
-    en: 'To request leave, open Leave, click New Leave Request, choose the leave type, start date, end date, and reason, then submit. Sick leave requires a supporting PDF, JPG, or PNG document up to 10 MB. The portal estimates chargeable working days and excludes configured holidays where applicable. HR or an approver reviews the request.',
-    tl: 'Para mag-request ng leave, buksan ang Leave, i-click ang New Leave Request, piliin ang leave type, start date, end date, at reason, tapos i-submit. Kailangan ng supporting PDF, JPG, o PNG na hanggang 10 MB para sa sick leave. Ine-estimate ng portal ang chargeable working days at ine-exclude ang configured holidays kung applicable. HR o approver ang magre-review.',
+    en: 'To request leave, open Leave, click New Leave Request, choose the leave type, start date, end date, and reason, then submit. Sick leave requires a supporting PDF, JPG, or PNG document up to 10 MB. The portal estimates working days and excludes configured holidays where applicable. Past dates are allowed in Jeddah. HR or an approver reviews the request.',
+    tl: 'Para mag-request ng leave, buksan ang Leave, i-click ang New Leave Request, piliin ang leave type, start date, end date, at reason, tapos i-submit. Kailangan ng supporting PDF, JPG, o PNG na hanggang 10 MB para sa sick leave. Ine-estimate ng portal ang working days at ine-exclude ang configured holidays kung applicable. HR o approver ang magre-review.',
   },
   leave_credits: {
-    en: 'Leave credits show your yearly allocation, used credits, and remaining balance. Regular employees usually have tracked credits; other employment statuses may still file leave but can have different credit handling based on HR rules.',
-    tl: 'Makikita sa leave credits ang yearly allocation mo, used credits, at remaining balance. Karaniwang tracked ang credits ng regular employees; ibang employment status ay puwedeng mag-file ng leave pero maaaring iba ang credit handling depende sa HR rules.',
+    en: 'The Jeddah system does not use leave credits. Employees may file leave for past, current, or future dates, subject to HR review.',
+    tl: 'Hindi gumagamit ng leave credits ang Jeddah system. Puwedeng mag-file para sa nakaraan, kasalukuyan, o susunod na petsa, at rerepasuhin ito ng HR.',
   },
   leave_history: {
     en: 'My Leave Requests shows your submitted leave requests, dates, type, status, reason, HR notes when available, filed time, and resolved time. Pending requests can be reviewed or cancelled only when the portal allows it.',
@@ -90,8 +90,8 @@ export const SYSTEM_KNOWLEDGE: Record<SystemKnowledgeMetric, { en: string; tl: s
     tl: 'May light at dark mode ang portal. Ang ilang seasonal o company display settings ay controlled ng administrators. Kung may text na hindi readable pagkatapos mag-switch ng theme, i-report ang exact screen para maayos.',
   },
   hr_workflows_overview: {
-    en: 'HR tools generally cover employee attendance review, dispute handling, leave request review, leave credits, payslip publishing, employee directory views, team leave calendar, and HR support workflows. Ask AI can explain this at a high level but cannot expose HR-only private records to employees.',
-    tl: 'Ang HR tools ay karaniwang para sa attendance review, dispute handling, leave request review, leave credits, payslip publishing, employee directory views, team leave calendar, at HR support workflows. Kayang i-explain ito ng Ask AI at a high level pero hindi puwedeng ilabas ang HR-only private records sa employees.',
+    en: 'HR tools generally cover employee attendance review, dispute handling, leave request review, payslip publishing, employee directory views, team leave calendar, and HR support workflows. Ask AI can explain this at a high level but cannot expose HR-only private records to employees.',
+    tl: 'Ang HR tools ay karaniwang para sa attendance review, dispute handling, leave request review, payslip publishing, employee directory views, team leave calendar, at HR support workflows. Kayang i-explain ito ng Ask AI at a high level pero hindi puwedeng ilabas ang HR-only private records sa employees.',
   },
   admin_workflows_overview: {
     en: 'Super-admin tools generally cover account creation, account status, password reset support, attendance correction, app settings, audit logs, system health, database backup, and archival workflows. Ask AI can describe these generally but cannot perform admin actions or reveal admin-only data.',

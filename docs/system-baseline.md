@@ -58,7 +58,9 @@ Dashboard pages still contain substantial cross-feature state and mutations. The
 
 ## Leave, requests, payslips, documents
 
-- Leave uses request rows, per-day allocations, yearly credits, holidays, and dated workweek rules.
+- Jeddah leave filing accepts past, current, and future dates, including retroactive vacation leave. End date must not precede start date; HR review, sick-leave supporting documents, and the maximum request duration still apply.
+- Leave credits are retired from employee/HR screens, settings, and Ask AI balance queries. Leave uses request rows, per-day allocations, holidays, and dated workweek rules. Historical credit rows remain for preservation.
+- Migration 20260915073910_jeddah_leave_without_credits.sql stops credit deductions and lets settled retroactive leave replace an existing Absent attendance row. It preserves time-in records and rest-day/holiday exclusions. The internal legacy day status Deducted means processed, with no credit balance mutation.
 - September request-support migration adds supporting documents for new sick leave, private leave-support storage, review/cancellation RPCs, and Realtime dependencies. Preserve transaction-based review behavior.
 - Employees read their own published payslips; draft visibility and publication rights belong to authorized administration. Publication API verifies that an UPDATE returned a published row before triggering email.
 - Payslip acknowledgement uses its dedicated database RPC. Storage file access and metadata access both matter.
@@ -105,3 +107,9 @@ Keep these changes when working on another feature. This document is an addition
 ## How to use this baseline
 
 For each next request, identify its dashboard, shared business rule, database boundary and automation dependency. Preserve unrelated existing behavior. Update this document when behavior changes, and record what was actually verified versus what still requires a live check. Consult feature docs under `docs/` for detail, but resolve dated documentation conflicts against current code and verified service state.
+
+## Leave filing update verification (2026-09-15)
+
+- Local implementation only; no deployment or live database migration was performed.
+- Live Supabase read for Jeddah was denied by the connector. Local database tests could not connect to PostgreSQL at 127.0.0.1:54322. The migration still requires database execution and verification.
+- TypeScript check passed; 15 Vitest files and 185 tests passed, including retroactive date validation, Jeddah working-day calculations, and retired AI balance behavior. SQL regression coverage is prepared but was not executed because no database connection was available.

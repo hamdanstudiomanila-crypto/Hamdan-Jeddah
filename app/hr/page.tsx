@@ -11,7 +11,7 @@ import HRMobileToolsSheet from '@/components/hr/HRMobileToolsSheet';
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { AlertTriangle, BadgeAlert, Bell, CalendarCheck2, CalendarClock, CalendarDays, CalendarRange, CheckCircle2, ChevronRight, Clock3, Coins, ContactRound, FileChartColumn, FolderDown, Headphones, LifeBuoy, Megaphone, Moon, RefreshCw, Search, Sun, UserRound } from 'lucide-react';
+import { AlertTriangle, BadgeAlert, Bell, CalendarCheck2, CalendarClock, CalendarDays, CalendarRange, CheckCircle2, ChevronRight, Clock3, ContactRound, FileChartColumn, FolderDown, Headphones, LifeBuoy, Megaphone, Moon, RefreshCw, Search, Sun, UserRound } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { LoadingRow } from '@/components/Spinner';
 import { useVerificationDialog } from '@/components/shared/useVerificationDialog';
@@ -34,7 +34,6 @@ const EmployeeEditModal = dynamic(() => import('@/components/hr/modals/EmployeeE
 const PayslipManagementModal = dynamic(() => import('@/components/hr/modals/PayslipManagementModal'));
 const DisputeHistoryModal = dynamic(() => import('@/components/hr/modals/DisputeHistoryModal'));
 const LeaveHistoryModal = dynamic(() => import('@/components/hr/modals/LeaveHistoryModal'));
-const LeaveCreditsModal = dynamic(() => import('@/components/hr/modals/LeaveCreditsModal'));
 const ExportReportsModal = dynamic(() => import('@/components/hr/modals/ExportReportsModal'));
 const HelpDeskRequestsModal = dynamic(() => import('@/components/hr/modals/HelpDeskRequestsModal'));
 const EmployeeDocumentsModal = dynamic(() => import('@/components/hr/modals/EmployeeDocumentsModal'));
@@ -100,13 +99,12 @@ export default function HRDashboard() {
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const MAX_AVATAR_MB = 5;
 
-  // App-wide configurable settings (late cutoff, default leave credits)
+  // App-wide configurable settings (late cutoff)
   // -- fetched once on load from app_settings, editable by Super Admin
   // without needing a code change/redeploy. Falls back to the
   // module-level constants above until the fetch resolves.
   const [lateCutoffHour, setLateCutoffHour] = useState(FALLBACK_LATE_CUTOFF_HOUR);
   const [lateCutoffMinute, setLateCutoffMinute] = useState(FALLBACK_LATE_CUTOFF_MINUTE);
-  const [fallbackLeaveCredits, setFallbackLeaveCredits] = useState(10);
   const [appSettings, setAppSettings] = useState<AppSettingsValues>({ ...DEFAULT_APP_SETTINGS });
   const [dismissedSeasonalBanner, setDismissedSeasonalBanner] = useState<string | null>(null);
   const seasonalTheme = useMemo(() => resolveSeasonalTheme(appSettings, 'hr'), [appSettings]);
@@ -124,78 +122,16 @@ export default function HRDashboard() {
     const map = Object.fromEntries((data || []).map((r) => [r.key, r.value]));
     if (typeof map.late_cutoff_hour === 'number') setLateCutoffHour(map.late_cutoff_hour);
     if (typeof map.late_cutoff_minute === 'number') setLateCutoffMinute(map.late_cutoff_minute);
-    if (typeof map.default_leave_credits === 'number') setFallbackLeaveCredits(map.default_leave_credits);
     setAppSettings(normalizeAppSettings(data));
   }, []);
 
-  // --- Leave Credits Overview (read-only monitoring, no manual edit) ---
-  // Pulls profiles + employee_government_ids + leave_credits separately
-  // and merges client-side, since not every employee has a leave_credits
-  // row yet (only created lazily by settle_leave_day() the first time
-  // they actually use a credit) or a government_ids row (HR hasn't set
-  // Employment Status yet).
-  const [leaveCreditsModalOpen, setLeaveCreditsModalOpen] = useState(false);
-  const [leaveCreditsLoading, setLeaveCreditsLoading] = useState(false);
-  const [leaveCreditsFetched, setLeaveCreditsFetched] = useState(false);
-  const [leaveCreditsData, setLeaveCreditsData] = useState<{
-    id: string;
-    full_name: string | null;
-    employee_id: string | null;
-    employment_status: string | null;
-    total_credits: number | null;
-    used_credits: number | null;
-  }[]>([]);
-
-  const fetchLeaveCreditsOverview = async () => {
-    setLeaveCreditsLoading(true);
-    const year = Number(new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Riyadh' }).format(new Date()).slice(0, 4));
-    const [profRes, govRes, creditsRes] = await Promise.all([
-      supabase.from('profiles').select('id, full_name, employee_id').eq('role', 'employee').eq('is_active', true).order('full_name'),
-      supabase.from('employee_government_ids').select('user_id, employment_status'),
-      supabase.from('leave_credits').select('user_id, total_credits, used_credits').eq('year', year),
-    ]);
-
-    if (profRes.error) console.error('Error fetching profiles for leave credits:', profRes.error);
-    if (govRes.error) console.error('Error fetching government IDs for leave credits:', govRes.error);
-    if (creditsRes.error) console.error('Error fetching leave credits:', creditsRes.error);
-
-    const govMap = new Map((govRes.data || []).map((g: any) => [g.user_id, g.employment_status]));
-    const creditsMap = new Map((creditsRes.data || []).map((c: any) => [c.user_id, c]));
-
-    const merged = (profRes.data || []).map((p: any) => {
-      const credits = creditsMap.get(p.id);
-      return {
-        id: p.id,
-        full_name: p.full_name,
-        employee_id: p.employee_id,
-        employment_status: govMap.get(p.id) ?? null,
-        total_credits: credits?.total_credits ?? null,
-        used_credits: credits?.used_credits ?? null,
-      };
-    });
-
-    setLeaveCreditsData(merged);
-    setLeaveCreditsLoading(false);
+  const [employmentStatuses, setEmploymentStatuses] = useState<{ user_id: string; employment_status: string | null }[]>([]);
+  const fetchEmploymentStatuses = async () => {
+    const { data, error } = await supabase.from('employee_government_ids').select('user_id, employment_status');
+    if (error) { console.error('Error fetching employment statuses:', error); return; }
+    setEmploymentStatuses(data ?? []);
   };
 
-  const openLeaveCreditsModal = () => {
-    setLeaveCreditsModalOpen(true);
-    if (!leaveCreditsFetched) {
-      setLeaveCreditsFetched(true);
-      fetchLeaveCreditsOverview();
-    }
-  };
-
-  // Sorted so Regular employees running low on credits surface first --
-  // the whole point of a monitoring view is to catch that at a glance.
-  const sortedLeaveCreditsData = useMemo(() => {
-    return [...leaveCreditsData].sort((a, b) => {
-      const aRemaining = a.employment_status === 'Regular' ? (a.total_credits ?? fallbackLeaveCredits) - (a.used_credits ?? 0) : Infinity;
-      const bRemaining = b.employment_status === 'Regular' ? (b.total_credits ?? fallbackLeaveCredits) - (b.used_credits ?? 0) : Infinity;
-      if (aRemaining !== bRemaining) return aRemaining - bRemaining;
-      return (a.full_name ?? '').localeCompare(b.full_name ?? '');
-    });
-  }, [leaveCreditsData, fallbackLeaveCredits]);
 
   // --- Export Reports (CSV + print-ready PDF) ---
   const [exportModalOpen, setExportModalOpen] = useState(false);
@@ -785,7 +721,7 @@ export default function HRDashboard() {
     const runStartupSweeps = async () => {
       // Catch-up sweeps, run once per dashboard load, before pulling any
       // attendance/leave data -- so anything they generate (a fresh
-      // 'Absent' row, a newly-deducted leave credit) is already reflected
+      // 'Absent' row, a settled leave day) is already reflected
       // in what gets fetched right after.
       const [{ error: leaveSweepError }, { error: absenceSweepError }] = await Promise.all([
         supabase.rpc('settle_overdue_leave_days'),
@@ -801,8 +737,7 @@ export default function HRDashboard() {
     fetchAppSettings();
     fetchAnnouncement();
     fetchDisputes();
-    setLeaveCreditsFetched(true);
-    fetchLeaveCreditsOverview();
+    fetchEmploymentStatuses();
     setHolidaysFetched(true);
     fetchHolidays();
     fetchHrSupportRequests();
@@ -1640,11 +1575,6 @@ export default function HRDashboard() {
     ).size,
     [todaysLogs]
   );
-  const lowLeaveCreditsCount = leaveCreditsData.filter((employee) => {
-    if (employee.employment_status !== 'Regular') return false;
-    const total = employee.total_credits ?? fallbackLeaveCredits;
-    return total - (employee.used_credits ?? 0) <= 3;
-  }).length;
   const upcomingHolidaysCount = holidays.filter((holiday) => holiday.holiday_date >= todayJeddah).length;
   const announcementModuleLabel = announcementUpdatedAt
     ? `Updated ${new Date(announcementUpdatedAt).toLocaleDateString('en-US', { timeZone: 'Asia/Riyadh', month: 'short', day: 'numeric' })}`
@@ -1723,8 +1653,8 @@ export default function HRDashboard() {
     if (!quickViewProfile) return [];
     return attendance.filter((log) => log.user_id === quickViewProfile.id).slice(0, 5);
   }, [attendance, quickViewProfile]);
-  const quickViewCredits = quickViewProfile
-    ? leaveCreditsData.find((entry) => entry.id === quickViewProfile.id) ?? null
+  const quickViewEmployment = quickViewProfile
+    ? employmentStatuses.find((entry) => entry.user_id === quickViewProfile.id) ?? null
     : null;
 
   const calendarData = useMemo(() => {
@@ -1821,12 +1751,6 @@ export default function HRDashboard() {
         : dailyOverviewModal === 'notTimedIn'
           ? notYetTimedInToday
           : [];
-
-  const getLeaveBalance = (userId?: string) => {
-    const employee = leaveCreditsData.find((entry) => entry.id === userId);
-    if (!employee || employee.employment_status !== 'Regular') return null;
-    return (employee.total_credits ?? fallbackLeaveCredits) - (employee.used_credits ?? 0);
-  };
 
   const scrollToDashboardSection = (id: string) => {
     requestAnimationFrame(() => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
@@ -1979,7 +1903,6 @@ export default function HRDashboard() {
           {[
             { title: 'Leave Requests', description: pendingLeaveCount ? `${pendingLeaveCount} pending` : 'All clear', icon: CalendarCheck2, tone: 'from-blue-500 to-indigo-700', action: () => { setSelectedLeaveDetail(null); setLeaveHistoryModalOpen(true); }, warning: pendingLeaveCount > 0, count: pendingLeaveCount },
             { title: 'Attendance Disputes', description: pendingDisputesCount ? `${pendingDisputesCount} pending` : 'All clear', icon: BadgeAlert, tone: 'from-orange-500 to-red-700', action: () => { setSelectedDisputeDetail(null); setDisputesHistoryModalOpen(true); }, warning: pendingDisputesCount > 0, count: pendingDisputesCount },
-            { title: 'Leave Credits', description: leaveCreditsLoading ? 'Checking...' : lowLeaveCreditsCount ? `${lowLeaveCreditsCount} low` : 'Healthy', icon: Coins, tone: 'from-amber-400 to-yellow-700', action: openLeaveCreditsModal, warning: lowLeaveCreditsCount > 0 },
             { title: 'Export Reports', description: 'CSV & PDF', icon: FileChartColumn, tone: 'from-cyan-500 to-blue-700', action: openReports },
             { title: 'Announcements', description: announcementModuleLabel, icon: Megaphone, tone: 'from-fuchsia-500 to-purple-700', action: () => setAnnouncementOpen(true) },
             { title: 'Holidays', description: holidaysLoading ? 'Checking...' : `${upcomingHolidaysCount} upcoming`, icon: CalendarDays, tone: 'from-rose-500 to-pink-700', action: openHolidays },
@@ -2006,7 +1929,7 @@ export default function HRDashboard() {
 
         <DailyOverviewModal modal={dailyOverviewModal} meta={dailyOverviewMeta} records={dailyOverviewRecords} initials={initials} setModal={setDailyOverviewModal} />
 
-        <EmployeeQuickViewModal fallbackLeaveCredits={fallbackLeaveCredits} formatPh={formatPh} initials={initials} openPayslipsModal={openPayslipsModal} openProfileChoice={openProfileChoice} quickViewAttendance={quickViewAttendance} quickViewCredits={quickViewCredits} quickViewProfile={quickViewProfile} scrollToDashboardSection={scrollToDashboardSection} setAttendanceHistoryOpen={setAttendanceHistoryOpen} setCutoffFilter={setCutoffFilter} setQuickViewProfile={setQuickViewProfile} setSearchTerm={setSearchTerm} setSelectedDate={setSelectedDate} statusTagClass={statusTagClass} todayJeddah={todayJeddah} />
+        <EmployeeQuickViewModal formatPh={formatPh} initials={initials} openPayslipsModal={openPayslipsModal} openProfileChoice={openProfileChoice} quickViewAttendance={quickViewAttendance} quickViewEmployment={quickViewEmployment} quickViewProfile={quickViewProfile} scrollToDashboardSection={scrollToDashboardSection} setAttendanceHistoryOpen={setAttendanceHistoryOpen} setCutoffFilter={setCutoffFilter} setQuickViewProfile={setQuickViewProfile} setSearchTerm={setSearchTerm} setSelectedDate={setSelectedDate} statusTagClass={statusTagClass} todayJeddah={todayJeddah} />
 
         <TeamLeaveCalendarModal open={leaveCalendarOpen} onClose={() => setLeaveCalendarOpen(false)} calendarData={calendarData} leaveCalendarMonth={leaveCalendarMonth} selectedCalendarDate={selectedCalendarDate} selectedCalendarDay={selectedCalendarDay} setLeaveCalendarMonth={setLeaveCalendarMonth} setSelectedCalendarDate={setSelectedCalendarDate} todayJeddah={todayJeddah} />
 
@@ -2091,10 +2014,7 @@ export default function HRDashboard() {
                         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
                           <div className="min-w-0">
                             <p className="font-bold text-slate-900 text-xs">{l.employee?.full_name ?? 'Unknown'}</p>
-                            <p className="text-slate-500 text-xs mt-0.5"><span className="font-semibold">{l.leave_type}</span> · {l.start_date === l.end_date ? l.start_date : `${l.start_date} → ${l.end_date}`} · {countLeaveDays(l.start_date, l.end_date)}<T>{" chargeable working day"}</T><T>{countLeaveDays(l.start_date, l.end_date) === 1 ? '' : 's'}</T></p>
-                            {getLeaveBalance(l.employee?.id) !== null && (
-                              <p className={`text-[10px] font-bold mt-1 ${countLeaveDays(l.start_date, l.end_date) > Number(getLeaveBalance(l.employee?.id)) ? 'text-rose-600' : 'text-emerald-600'}`}><T>{" Balance: "}</T>{getLeaveBalance(l.employee?.id)}<T>{" → estimated "}</T>{Number(getLeaveBalance(l.employee?.id)) - countLeaveDays(l.start_date, l.end_date)}<T>{" after approval "}</T></p>
-                            )}
+                            <p className="text-slate-500 text-xs mt-0.5"><span className="font-semibold">{l.leave_type}</span> · {l.start_date === l.end_date ? l.start_date : `${l.start_date} → ${l.end_date}`} · {countLeaveDays(l.start_date, l.end_date)}<T>{" working day"}</T><T>{countLeaveDays(l.start_date, l.end_date) === 1 ? '' : 's'}</T></p>
                             {l.reason && <p className="text-slate-400 text-[10px] italic mt-0.5"><T>{"&ldquo;"}</T>{l.reason}<T>{"&rdquo;"}</T></p>}
                             <input type="text" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()} className="input-field !py-1.5 !text-xs !min-h-0 mt-1.5" placeholder="HR notes (optional)..." value={leaveHrNotes[l.id] ?? ''} onChange={(e) => setLeaveHrNotes((prev) => ({ ...prev, [l.id]: e.target.value }))} />
                           </div>
@@ -2229,7 +2149,7 @@ export default function HRDashboard() {
       </div>
 
       <HRMobileBottomNav requestCount={pendingHrActionCount} onHome={() => scrollToDashboardSection('hr-dashboard-top')} onAttendance={openAttendanceLog} onRequests={() => setActionCenterOpen(true)} onEmployees={() => setEmployeesListOpen(true)} onMore={() => setMobileToolsOpen(true)} />
-      <HRMobileToolsSheet open={mobileToolsOpen} darkMode={darkMode} onClose={() => setMobileToolsOpen(false)} onToggleTheme={toggleTheme} onLogout={handleLogout} onAnnouncements={() => setAnnouncementOpen(true)} onHolidays={openHolidays} onLeaveCalendar={openLeaveCalendar} onLeaveCredits={openLeaveCreditsModal} onReports={openReports} onDocuments={openDocuments} onHelpdesk={openHelpdesk} />
+      <HRMobileToolsSheet open={mobileToolsOpen} darkMode={darkMode} onClose={() => setMobileToolsOpen(false)} onToggleTheme={toggleTheme} onLogout={handleLogout} onAnnouncements={() => setAnnouncementOpen(true)} onHolidays={openHolidays} onLeaveCalendar={openLeaveCalendar} onReports={openReports} onDocuments={openDocuments} onHelpdesk={openHelpdesk} />
 
       <EmployeeChoiceModal open={modalMode === 'choice'} onClose={closeModal} initials={initials} openEdit={openEdit} openPayslipsModal={openPayslipsModal} selectedProfile={selectedProfile} />
 
@@ -2249,7 +2169,6 @@ export default function HRDashboard() {
       {/* EMPLOYEE DOCUMENTS MANAGEMENT MODAL */}
       <EmployeeDocumentsModal open={hrDocumentsModalOpen} onClose={() => setHrDocumentsModalOpen(false)} saving={hrDocumentSaving} loading={hrDocumentsLoading} title={hrDocumentTitle} setTitle={setHrDocumentTitle} category={hrDocumentCategory} setCategory={setHrDocumentCategory} file={hrDocumentFile} setFile={setHrDocumentFile} fileRef={hrDocumentFileRef} documents={hrDocuments} onUpload={uploadHrDocument} onToggle={toggleHrDocument} onDelete={deleteHrDocument} />
 
-      <LeaveCreditsModal open={leaveCreditsModalOpen} onClose={() => setLeaveCreditsModalOpen(false)} fallbackLeaveCredits={fallbackLeaveCredits} leaveCreditsLoading={leaveCreditsLoading} sortedLeaveCreditsData={sortedLeaveCreditsData} />
 
       <ExportReportsModal employees={profiles} exportEmployeeId={exportEmployeeId} setExportEmployeeId={setExportEmployeeId} open={exportModalOpen} onClose={() => setExportModalOpen(false)} availableCutoffs={availableCutoffs} exportCutoff={exportCutoff} exportEmployeeMasterListCSV={exportEmployeeMasterListCSV} exportEmployeeMasterListPDF={exportEmployeeMasterListPDF} exportMsg={exportMsg} exportPayrollSummaryCSV={exportPayrollSummaryCSV} exportPayrollSummaryPDF={exportPayrollSummaryPDF} exportRawAttendanceCSV={exportRawAttendanceCSV} exportRawAttendancePDF={exportRawAttendancePDF} exportingType={exportingType} formatCutoffLabel={formatCutoffLabel} rawExportMonth={rawExportMonth} rawExportPeriod={rawExportPeriod} rawExportPreviewCount={rawExportPreviewCount} setExportCutoff={setExportCutoff} setExportMsg={setExportMsg} setRawExportMonth={setRawExportMonth} setRawExportPeriod={setRawExportPeriod} />
 
