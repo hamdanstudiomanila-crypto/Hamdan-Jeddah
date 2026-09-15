@@ -4,7 +4,7 @@ import { T, useLanguage } from '@/components/language/LanguageProvider';
 
 import { isScheduledWorkday, isWorkingDate, workDate, WORK_SCHEDULE_EFFECTIVE_DATE } from '@/lib/work-schedule';
 import { countChargeableLeaveDays } from '@/lib/leave-rules';
-import { attendanceTiming } from '@/lib/attendance-rules';
+import { attendanceTiming, isEarlyOut } from '@/lib/attendance-rules';
 import { applyPortalTheme } from '@/lib/portal-theme';
 import MobileBottomNav from '@/components/employee/MobileBottomNav';
 import EmployeeSummaryCard from '@/components/employee/EmployeeSummaryCard';
@@ -2381,7 +2381,7 @@ export default function EmployeeDashboard() {
                           <div className="font-medium text-slate-900 text-xs">{new Date(log.log_date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</div>
                           <div className="text-slate-400 text-[10px]">{log.log_date}</div>
                         </div>
-                        <span className={`${statusTagClass(log.status)} inline-flex w-[76px] items-center justify-center justify-self-center whitespace-nowrap`}>{log.status}</span>
+                        <div className="flex flex-col items-center justify-self-center gap-1"><span className={`${statusTagClass(log.status)} inline-flex w-[76px] items-center justify-center whitespace-nowrap`}>{log.status}</span>{isEarlyOut(log.log_date, log.time_out, workEndHour, workEndMinute) && <span className="inline-flex whitespace-nowrap rounded-full bg-amber-100 px-2 py-1 text-[10px] font-bold text-amber-800 dark:bg-amber-950 dark:text-amber-200">{localize('Early Out')}</span>}</div>
                           <div className="min-w-0 text-end">
                             <div className="whitespace-nowrap font-semibold text-slate-700 text-xs">
                               {log.time_in ? new Date(log.time_in).toLocaleTimeString('en-US', { timeZone: 'Asia/Riyadh', hour: '2-digit', minute: '2-digit' }) : '--:--'}

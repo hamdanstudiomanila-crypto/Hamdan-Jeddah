@@ -4,6 +4,7 @@ import { T, useLanguage } from '@/components/language/LanguageProvider';
 
 import { memo, useEffect, useState } from 'react';
 import { isWorkingDate, workDate } from '@/lib/work-schedule';
+import { isEarlyOut } from '@/lib/attendance-rules';
 import { Clock3 } from 'lucide-react';
 
 type TodayLog = {
@@ -49,6 +50,8 @@ function EmployeeWorkClock({ todayLog, holidays = [], startHour = 8, startMinute
   const isTodayLate = todayLog?.status?.toLowerCase() === 'late';
   const todayWorkStatus = !todayLog
     ? { label: restDay ? 'Non-working day' : 'No Time In', color: restDay ? 'bg-slate-100 text-slate-700' : 'bg-red-100 text-red-700' }
+    : isEarlyOut(clock.dateKey, todayLog.time_out, endHour, endMinute)
+      ? { label: isTodayLate ? 'Late / Early Out' : 'Early Out', color: 'bg-amber-100 text-amber-800' }
     : isTodayLate
       ? { label: todayLog.time_out ? 'Completed · Late' : 'Working · Late', color: 'bg-orange-100 text-orange-700' }
       : { label: todayLog.time_out ? 'Completed' : 'Working', color: 'bg-green-100 text-green-700' };
